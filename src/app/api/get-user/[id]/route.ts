@@ -1,22 +1,30 @@
 import { db } from "@/lib/db";
 import { NextRequest } from "next/server";
-import type { NextResponse } from "next/server";
-import type { RouteHandlerContext } from "next/dist/server/future/route-modules/app-route/module"; // internal typing
+
+// ✅ This is the proper typing for context in route handlers
+type Context = {
+  params: {
+    id: string;
+  };
+};
 
 export async function GET(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: Context
 ) {
-  const { id } = context.params;
+  const { id } = params;
 
   try {
-    const [rows]: any = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+    const [rows]: any = await db.execute(
+      "SELECT * FROM users WHERE id = ?",
+      [id]
+    );
 
     if (!rows || rows.length === 0) {
-      return new Response(JSON.stringify({ message: 'User not found' }), {
+      return new Response(JSON.stringify({ message: "User not found" }), {
         status: 404,
         headers: {
-          'Cache-Control': 'no-store',
+          "Cache-Control": "no-store",
         },
       });
     }
@@ -24,16 +32,16 @@ export async function GET(
     return new Response(JSON.stringify({ user: rows[0] }), {
       status: 200,
       headers: {
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
+        "Cache-Control": "public, max-age=60, stale-while-revalidate=30",
       },
     });
   } catch (error) {
-    console.error('DB error:', error);
+    console.error("DB error:", error);
 
-    return new Response(JSON.stringify({ message: 'Internal Server Error' }), {
+    return new Response(JSON.stringify({ message: "Internal Server Error" }), {
       status: 500,
       headers: {
-        'Cache-Control': 'no-store',
+        "Cache-Control": "no-store",
       },
     });
   }
