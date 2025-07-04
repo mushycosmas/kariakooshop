@@ -1,44 +1,38 @@
 import { db } from "@/lib/db";
+import { NextRequest } from "next/server";
 
-export async function GET(req, { params }) {
-  const { id } = params;
+export async function GET(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  const { id } = context.params;
 
   try {
-    const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
+    const [rows]: any = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
 
-    if (rows.length === 0) {
-      return new Response(
-        JSON.stringify({ message: 'User not found' }),
-        {
-          status: 404,
-          headers: {
-            'Cache-Control': 'no-store', // Don't cache not found errors
-          },
-        }
-      );
+    if (!rows || rows.length === 0) {
+      return new Response(JSON.stringify({ message: 'User not found' }), {
+        status: 404,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ user: rows[0] }),
-      {
-        status: 200,
-        headers: {
-          // Cache for 60 seconds in browser and CDN, allow stale while revalidating for 30 seconds
-          'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
-        },
-      }
-    );
+    return new Response(JSON.stringify({ user: rows[0] }), {
+      status: 200,
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
+      },
+    });
   } catch (error) {
     console.error('DB error:', error);
 
-    return new Response(
-      JSON.stringify({ message: 'Internal Server Error' }),
-      {
-        status: 500,
-        headers: {
-          'Cache-Control': 'no-store', // Don't cache errors
-        },
-      }
-    );
+    return new Response(JSON.stringify({ message: 'Internal Server Error' }), {
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   }
 }
