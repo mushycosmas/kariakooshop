@@ -1,48 +1,37 @@
 import { db } from "@/lib/db";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-// Use default type for the handler
+// Handler for GET requests
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } } // Dynamic params from URL
+  { params }: { params: { id: string } } // Typing for dynamic route params
 ) {
   const { id } = params;
 
   try {
+    // Execute DB query
     const [rows]: any = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
 
+    // If user is not found
     if (!rows || rows.length === 0) {
-      return new Response(
-        JSON.stringify({ message: 'User not found' }),
-        {
-          status: 404,
-          headers: {
-            'Cache-Control': 'no-store',
-          },
-        }
+      return NextResponse.json(
+        { message: 'User not found' },
+        { status: 404, headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
-    return new Response(
-      JSON.stringify({ user: rows[0] }),
-      {
-        status: 200,
-        headers: {
-          'Cache-Control': 'public, max-age=60, stale-while-revalidate=30',
-        },
-      }
+    // If user found, return the user data
+    return NextResponse.json(
+      { user: rows[0] },
+      { status: 200, headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=30' } }
     );
   } catch (error) {
     console.error('DB error:', error);
 
-    return new Response(
-      JSON.stringify({ message: 'Internal Server Error' }),
-      {
-        status: 500,
-        headers: {
-          'Cache-Control': 'no-store',
-        },
-      }
+    // Return error response
+    return NextResponse.json(
+      { message: 'Internal Server Error' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
     );
   }
 }
