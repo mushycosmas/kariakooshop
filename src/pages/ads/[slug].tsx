@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Spinner, Alert, Card, Button, Image } from 'react-bootstrap';
-import AdsDetails from '@/components/products/adsDetails';
+import AdsDetails from '@/components/products/AdsDetails';
 import StartChat from '../../components/Buttons/StartChat';
 import { Product } from '../../types/Product';
 import MainLayout from '@/components/MainLayout';

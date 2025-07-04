@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Container, Row, Col, Spinner, Alert, Card, Button, Image } from 'react-bootstrap';
-import AdsDetails from '@/components/products/adsDetails';
+import AdsDetails from '@/components/products/AdsDetails';
 import StartChat from '@/components/Buttons/StartChat';
 import MainLayout from '@/components/MainLayout';
 import SafetyTipsCard from '@/components/Cards/SafetyTipsCard';
