@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { NextRequest } from "next/server";
+import type { NextResponse } from "next/server";
+import type { RouteHandlerContext } from "next/dist/server/future/route-modules/app-route/module"; // internal typing
 
 export async function GET(
   req: NextRequest,
