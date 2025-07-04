@@ -11,8 +11,8 @@ export default function PersonalDetailsForm() {
   const [location, setLocation] = useState('Kinondoni');
   const [birthday, setBirthday] = useState('');
   const [gender, setGender] = useState('Male');
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -49,23 +49,28 @@ export default function PersonalDetailsForm() {
         setEmail(user.email ?? '');
         setAddress(user.address ?? '');
         if (user.avatar_url) setAvatarPreview(user.avatar_url);
-      } catch (err) {
-        setError(err.message);
+      } catch (err: unknown) {
+        // Type check and cast the error
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unknown error occurred.');
+        }
       }
     }
 
     fetchUser();
   }, [customerId]);
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSuccess('');
@@ -73,7 +78,7 @@ export default function PersonalDetailsForm() {
 
     try {
       const formData = new FormData();
-      formData.append('id', customerId);
+      formData.append('id', customerId.toString());
       formData.append('firstName', firstName);
       formData.append('lastName', lastName);
       formData.append('location', location);
@@ -98,7 +103,7 @@ export default function PersonalDetailsForm() {
       } else {
         setError(data.message || 'Something went wrong.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError('Network error or server issue.');
     } finally {
       setIsSubmitting(false);
