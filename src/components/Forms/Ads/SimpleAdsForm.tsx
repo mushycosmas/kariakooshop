@@ -31,6 +31,7 @@ const SimpleAdsForm = () => {
   const [images, setImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -48,6 +49,11 @@ const SimpleAdsForm = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      if (files.length + images.length > 5) {
+        setMessage('You can upload a maximum of 5 images.');
+        return;
+      }
+
       const newFiles = Array.from(files);
       const updatedImages = [...images, ...newFiles];
       setImages(updatedImages);
@@ -71,6 +77,7 @@ const SimpleAdsForm = () => {
       return;
     }
 
+    setIsSubmitting(true);
     const data = new FormData();
     Object.entries(form).forEach(([key, value]) => data.append(key, value));
     images.forEach((file) => data.append('images[]', file));
@@ -100,6 +107,8 @@ const SimpleAdsForm = () => {
     } catch (error) {
       console.error(error);
       setMessage('An error occurred while submitting the ad.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -187,8 +196,8 @@ const SimpleAdsForm = () => {
         ))}
       </div>
 
-      <Button type="submit" variant="primary">
-        Post Ad
+      <Button type="submit" variant="primary" disabled={isSubmitting}>
+        {isSubmitting ? 'Posting...' : 'Post Ad'}
       </Button>
     </Form>
   );

@@ -62,22 +62,28 @@ const CreateAdForm = () => {
       return;
     }
 
+    if (!formData.name || !formData.price || !formData.product_description) {
+      setError("Please fill in all the required fields.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
 
     const payload = new FormData();
+    // Append form fields to FormData
     for (const [key, value] of Object.entries(formData)) {
       if (key === "property_images") {
         formData.property_images.forEach((file) =>
           payload.append("property_images[]", file)
         );
       } else {
-        payload.append(key, value);
+        payload.append(key, value.toString());
       }
     }
 
     try {
-      // Replace with real API call
+      // Simulate API call
       console.log("Submitting form", formData);
       await new Promise((res) => setTimeout(res, 1500));
       alert("Ad created successfully!");
@@ -133,6 +139,7 @@ const CreateAdForm = () => {
                 name="product_description"
                 value={formData.product_description}
                 onChange={handleChange}
+                required
               />
             </Form.Group>
 
