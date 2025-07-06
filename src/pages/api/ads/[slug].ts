@@ -27,6 +27,13 @@ interface Ad extends RowDataPacket {
   seller?: Seller;
 }
 
+// Static seller data (you can customize this)
+const STATIC_SELLER: Seller = {
+  id: 1,
+  name: "Exact Manpower Consulting Ltd",
+  avatar: "/static/images/default-seller-avatar.png", // or null if none
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method Not Allowed' });
@@ -41,17 +48,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const connection = await db.getConnection();
 
   try {
-    // Fetch ad by slug with seller info joined
+    // Fetch ad by slug only (no join)
     const [ads] = await connection.execute<Ad[]>(
-      `SELECT 
-         a.*, 
-         u.id AS seller_id, 
-         u.name AS seller_name, 
-         u.avatar AS seller_avatar 
-       FROM ads a
-       JOIN users u ON a.user_id = u.id
-       WHERE a.slug = ? 
-       LIMIT 1`,
+      `SELECT * FROM ads WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -62,17 +61,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const ad = ads[0];
 
-    // Map seller info into nested seller object
-    ad.seller = {
-      id: ad.seller_id,
-      name: ad.seller_name,
-      avatar: ad.seller_avatar ?? null,
-    };
-
-    // Remove flat seller fields
-    delete (ad as any).seller_id;
-    delete (ad as any).seller_name;
-    delete (ad as any).seller_avatar;
+    // Attach static seller data here
+    ad.seller = STATIC_SELLER;
 
     // Fetch images for the ad
     const [images] = await connection.execute<Image[]>(
