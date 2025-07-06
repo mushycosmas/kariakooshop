@@ -2,6 +2,16 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../../lib/db';
 import { RowDataPacket } from 'mysql2/promise';
 
+interface Seller {
+  id: number;
+  name: string;
+  avatar?: string | null;
+}
+
+interface Image extends RowDataPacket {
+  path: string;
+}
+
 interface Ad extends RowDataPacket {
   id: number;
   name: string;
@@ -14,10 +24,7 @@ interface Ad extends RowDataPacket {
   created_at?: string;
   updated_at?: string;
   images?: Image[];
-}
-
-interface Image extends RowDataPacket {
-  path: string;
+  seller?: Seller;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -34,9 +41,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const connection = await db.getConnection();
 
   try {
-    // Fetch ad by slug
+    // Fetch ad by slug with seller info joined
     const [ads] = await connection.execute<Ad[]>(
-      `SELECT * FROM ads WHERE slug = ? LIMIT 1`,
+      `SELECT 
+         a.*, 
+         u.id AS seller_id, 
+         u.name AS seller_name, 
+         u.avatar AS seller_avatar 
+       FROM ads a
+       JOIN users u ON a.user_id = u.id
+       WHERE a.slug = ? 
+       LIMIT 1`,
       [slug]
     );
 
@@ -46,6 +61,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const ad = ads[0];
+
+    // Map seller info into nested seller object
+    ad.seller = {
+      id: ad.seller_id,
+      name: ad.seller_name,
+      avatar: ad.seller_avatar ?? null,
+    };
+
+    // Remove flat seller fields
+    delete (ad as any).seller_id;
+    delete (ad as any).seller_name;
+    delete (ad as any).seller_avatar;
 
     // Fetch images for the ad
     const [images] = await connection.execute<Image[]>(
