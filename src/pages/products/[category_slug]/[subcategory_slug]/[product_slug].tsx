@@ -36,6 +36,13 @@ const AdDetail = () => {
     );
   }
 
+  // Destructure seller safely with defaults
+  const seller = product.seller ?? {};
+  const avatar = seller.avatar || '/default-avatar.png';
+  const sellerName = seller.name || 'Unknown Seller';
+  const phone = seller.phone || 'N/A';
+  const email = seller.email || '';
+
   return (
     <MainLayout>
       <Container className="mt-4">
@@ -47,29 +54,31 @@ const AdDetail = () => {
           <Col lg={4}>
             <Card className="shadow-sm border rounded-3 p-3 text-center">
               <Image
-                src={product.seller?.avatar || '/default-avatar.png'}
+                src={avatar}
                 roundedCircle
                 width={80}
                 height={80}
                 className="mb-3"
                 alt="Seller Avatar"
               />
-              <h5 className="fw-bold mb-1">{product.seller?.name || 'Unknown Seller'}</h5>
+              <h5 className="fw-bold mb-1">{sellerName}</h5>
               <small className="text-muted">Verified Seller</small>
               <hr />
               <p>
                 <i className="bi bi-telephone-fill me-2" />
-                {product.seller?.phone || 'N/A'}
+                {phone}
               </p>
-              {product.seller?.email && (
+              {email && (
                 <p>
                   <i className="bi bi-envelope-fill me-2" />
-                  {product.seller.email}
+                  {email}
                 </p>
               )}
               <Button
                 variant="success"
-                href={`https://wa.me/${product.seller?.phone?.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(product.name)}`}
+                href={`https://wa.me/${phone.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(
+                  product.name
+                )}`}
                 className="w-100 mt-2"
                 target="_blank"
                 rel="noopener noreferrer"
