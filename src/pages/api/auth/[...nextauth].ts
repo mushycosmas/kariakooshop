@@ -4,6 +4,7 @@ import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
 
 interface GoogleProfile {
+  id: string; // good to have but not necessarily required here
   email: string;
   name?: string;
   picture?: string;
@@ -46,29 +47,33 @@ export default NextAuth({
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
               name,
-              "google", // or "customer", "guest", etc.
+              "google",
               firstName || "",
               lastName || "",
               "", // location
               email,
-              "", // password (not used with Google login)
+              "", // password
               "", // phone
               "", // gender
               null, // birthday
               "", // address
-              image, // avatar_url
+              image,
             ]
           );
         }
       }
+
+      // You can assign token.id here for consistency if you want
+      if (token.sub && !token.id) {
+        token.id = token.sub;
+      }
+
       return token;
     },
 
     async session({ session, token }) {
-      if (token?.sub) {
-        session.user.id = token.sub;
-      } else {
-        session.user.id = "";
+      if (session.user) {
+        session.user.id = token.id ?? ""; // use token.id if exists
       }
       return session;
     },
