@@ -3,6 +3,13 @@ import GoogleProvider from "next-auth/providers/google";
 import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
 
+interface GoogleProfile {
+  email: string;
+  name?: string;
+  picture?: string;
+  [key: string]: any;
+}
+
 export default NextAuth({
   providers: [
     GoogleProvider({
@@ -17,9 +24,10 @@ export default NextAuth({
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile?.email) {
-        const email = profile.email;
-        const name = profile.name || "";
-        const image = profile.picture || "";
+        const prof = profile as GoogleProfile;
+        const email = prof.email;
+        const name = prof.name || "";
+        const image = prof.picture || "";
 
         // Check if user exists
         const [rows] = await db.query<RowDataPacket[]>(
@@ -41,25 +49,26 @@ export default NextAuth({
               "google", // or "customer", "guest", etc.
               firstName || "",
               lastName || "",
-              "",        // location
+              "", // location
               email,
-              "",        // password (not used with Google login)
-              "",        // phone
-              "",        // gender
-              null,      // birthday
-              "",        // address
-              image      // avatar_url
+              "", // password (not used with Google login)
+              "", // phone
+              "", // gender
+              null, // birthday
+              "", // address
+              image, // avatar_url
             ]
           );
         }
       }
-
       return token;
     },
 
     async session({ session, token }) {
-      if (token) {
+      if (token?.sub) {
         session.user.id = token.sub;
+      } else {
+        session.user.id = "";
       }
       return session;
     },
