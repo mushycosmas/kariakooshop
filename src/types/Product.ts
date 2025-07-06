@@ -1,5 +1,3 @@
-// types/Product.ts
-
 export interface Seller {
   id?: number;
   name?: string;
@@ -10,10 +8,10 @@ export interface Seller {
 
 export interface Product {
   id: number;
+  slug: string;               // <-- add this line
   name: string;
   price: number;
   product_description?: string;
-  // ...other existing product fields
-
+  // ... other fields
   seller?: Seller;
 }
