@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect } from "react";
 import MainLayout from "../components/MainLayout";
@@ -6,13 +6,12 @@ import HeroSection from "../components/partial/HeroSection";
 import { Container } from "react-bootstrap";
 import ProductList from "../components/products/ProductList";
 import WhatsAppButton from "../components/Buttons/WhatsAppButton";
-// import CategoryPills from "../components/products/CategoryPills";
 
 const Home = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState(""); // 👈 Add this
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     async function loadCategories() {
