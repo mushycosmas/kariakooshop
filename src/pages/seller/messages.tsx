@@ -60,7 +60,7 @@ const Page: React.FC = () => {
             ) : (
               <ConversationsList
                 currentUserId={currentUserId}
-                conversations={conversations}
+              
                 onSelectConversation={setSelectedConversation}
               />
             )}
