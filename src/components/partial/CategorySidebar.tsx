@@ -39,41 +39,41 @@ const CategorySidebar: React.FC<Props> = ({ onSubcategorySelect }) => {
     fetchCategories();
   }, []);
 
-  const styles = {
-    stickyWrapper: {
-      position: "sticky" as const,
-      top: "80px",
-      zIndex: 10,
-    },
-    sidebarBox: {
-      border: "1px solid #dee2e6",
-      borderRadius: "0.5rem",
-      backgroundColor: "#fff",
-      padding: "1rem",
-      boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-    },
-    sidebarItem: {
-      position: "relative" as const,
-    },
-    submenu: {
-    position: "absolute" as const,
+ const styles: { [key: string]: React.CSSProperties } = {
+  stickyWrapper: {
+    position: "sticky",
+    top: 80,
+    zIndex: 10,
+  },
+  sidebarBox: {
+    border: "1px solid #dee2e6",
+    borderRadius: "0.5rem",
+    backgroundColor: "#fff",
+    padding: "1rem",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+  },
+  sidebarItem: {
+    position: "relative",
+  },
+  submenu: {
+    position: "absolute",
     top: 0,
     left: "100%",
     minWidth: "200px",
-    maxHeight: "300px",       // fixed max height
-    overflowY: "auto",        // enable vertical scroll if needed
-    background: "#fff",
+    maxHeight: "300px",
+    overflowY: "auto", // this will now be valid
+    backgroundColor: "#fff",
     border: "1px solid #dee2e6",
     zIndex: 1000,
     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
   },
-    listItem: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      cursor: "pointer",
-    },
-  };
+  listItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    cursor: "pointer",
+  },
+};
 
   return (
     <div style={styles.stickyWrapper}>
