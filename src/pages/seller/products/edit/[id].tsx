@@ -9,7 +9,7 @@ import SellerDashboardLayout from '@/components/SellerDashboardLayout';
 
 type ProductForm = {
   name: string;
-  price: string; // keeping string for easy input binding
+  price: string;
   product_description: string;
   subcategory_id: string;
   status: string;
@@ -75,13 +75,9 @@ const EditProductForm: React.FC = () => {
     status: 'active',
   });
 
-  // Existing images URLs from backend
   const [existingImages, setExistingImages] = useState<string[]>([]);
-  // New images uploaded in this session
   const [newImages, setNewImages] = useState<File[]>([]);
-  // Previews for new images
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-
   const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -97,7 +93,6 @@ const EditProductForm: React.FC = () => {
     },
   });
 
-  // Fetch product details when id and editor ready
   useEffect(() => {
     if (!id) return;
 
@@ -106,7 +101,6 @@ const EditProductForm: React.FC = () => {
       try {
         const res = await fetch(`/api/seller/products/${id}`);
         if (!res.ok) throw new Error('Failed to fetch product');
-
         const data = await res.json();
 
         setForm({
@@ -133,15 +127,13 @@ const EditProductForm: React.FC = () => {
     fetchProduct();
   }, [id, editor]);
 
-  // Handle input/select changes
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle new image uploads
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -149,24 +141,20 @@ const EditProductForm: React.FC = () => {
       const updatedNewImages = [...newImages, ...filesArray];
       setNewImages(updatedNewImages);
       setPreviewUrls(updatedNewImages.map((file) => URL.createObjectURL(file)));
-      // Clear file input to allow same file upload again if needed
       e.target.value = '';
     }
   };
 
-  // Remove an existing image URL (marks for removal)
   const removeExistingImage = (urlToRemove: string) => {
     setExistingImages((imgs) => imgs.filter((url) => url !== urlToRemove));
   };
 
-  // Remove new uploaded image by index
   const removeNewImage = (index: number) => {
     const filteredImages = newImages.filter((_, i) => i !== index);
     setNewImages(filteredImages);
     setPreviewUrls(filteredImages.map((file) => URL.createObjectURL(file)));
   };
 
-  // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -181,17 +169,14 @@ const EditProductForm: React.FC = () => {
     try {
       const formData = new FormData();
 
-      // Append form fields
       Object.entries(form).forEach(([key, value]) => {
         formData.append(key, value);
       });
 
-      // Append existing images URLs to keep
       existingImages.forEach((url) => {
         formData.append('existingImages', url);
       });
 
-      // Append new images
       newImages.forEach((file) => {
         formData.append('newImages', file);
       });
@@ -205,7 +190,6 @@ const EditProductForm: React.FC = () => {
 
       if (res.ok) {
         setMessage(result.message || 'Product updated successfully!');
-        // Redirect after short delay
         setTimeout(() => {
           router.push('/seller/products');
         }, 1500);
@@ -269,7 +253,6 @@ const EditProductForm: React.FC = () => {
                 <option value="1">Phones</option>
                 <option value="2">Laptops</option>
                 <option value="3">Clothing</option>
-                {/* TODO: Replace with dynamic subcategories */}
               </Form.Select>
             </Form.Group>
           </Col>
