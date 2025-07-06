@@ -16,7 +16,6 @@ import {
 const navLinks = [
   { href: '/seller/dashboard', label: 'Dashboard', icon: <FaTachometerAlt /> },
   { href: '/seller/product-list', label: 'My Products', icon: <FaBoxOpen /> },
-  // { href: '#', label: 'Orders', icon: <FaClipboardList /> },
   { href: '/seller/new-add', label: 'Add Product', icon: <FaPlus /> },
   { href: '/seller/messages', label: 'Messages', icon: <FaEnvelope /> },
   { href: '/seller/settings', label: 'Settings', icon: <FaUserCog /> },
@@ -24,7 +23,7 @@ const navLinks = [
 ];
 
 const SellerSidebar = () => {
-  const pathname = usePathname(); // works in app router
+  const pathname = usePathname() ?? ""; // ensures it's always a string
 
   return (
     <div className="d-flex flex-column vh-100 border-end bg-white p-3">
