@@ -60,7 +60,7 @@ const Page: React.FC = () => {
             ) : (
               <ConversationsList
                 currentUserId={currentUserId}
-              
+                conversations={conversations}
                 onSelectConversation={setSelectedConversation}
               />
             )}
@@ -76,7 +76,7 @@ const Page: React.FC = () => {
                   name: selectedConversation.adName,
                   brand: selectedConversation.adBrand,
                   price: selectedConversation.adPrice,
-                  image: selectedConversation.adImage,
+                  image: selectedConversation.adImage || "/default-image.png", // ✅ Ensure a string is passed
                 }}
               />
             ) : (
