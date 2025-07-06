@@ -73,7 +73,7 @@ export default NextAuth({
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id ?? ""; // use token.id if exists
+      //  session.user.id = token.id ?? ""; // use token.id if exists
       }
       return session;
     },
