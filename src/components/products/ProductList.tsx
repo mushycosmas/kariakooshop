@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import ProductCard from "./ProductCard";
@@ -9,7 +11,6 @@ interface ProductListProps {
   searchQuery?: string;
 }
 
-// Cache expires after 15 minutes
 const CACHE_DURATION_MS = 15 * 60 * 1000;
 
 const ProductList: React.FC<ProductListProps> = ({
@@ -22,7 +23,6 @@ const ProductList: React.FC<ProductListProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load saved subcategory from localStorage on mount
   useEffect(() => {
     const savedSubcategory = localStorage.getItem("subcategoryId");
     if (savedSubcategory) {
@@ -30,12 +30,10 @@ const ProductList: React.FC<ProductListProps> = ({
     }
   }, []);
 
-  // Save selected subcategory to localStorage
   useEffect(() => {
     localStorage.setItem("subcategoryId", subcategoryId);
   }, [subcategoryId]);
 
-  // Fetch products with cache and expiry logic
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
@@ -58,10 +56,10 @@ const ProductList: React.FC<ProductListProps> = ({
           setLoading(false);
           return;
         } else {
-          localStorage.removeItem(cacheKey); // expired
+          localStorage.removeItem(cacheKey);
         }
       } catch {
-        localStorage.removeItem(cacheKey); // corrupted
+        localStorage.removeItem(cacheKey);
       }
     }
 
@@ -79,7 +77,6 @@ const ProductList: React.FC<ProductListProps> = ({
 
       setProducts(fetchedProducts);
 
-      // Save to cache with timestamp
       localStorage.setItem(
         cacheKey,
         JSON.stringify({
@@ -95,12 +92,10 @@ const ProductList: React.FC<ProductListProps> = ({
     }
   };
 
-  // Fetch products when subcategory changes
   useEffect(() => {
     fetchProducts();
   }, [subcategoryId]);
 
-  // Filter products when products or searchQuery changes
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setFilteredProducts(products);
