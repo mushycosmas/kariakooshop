@@ -75,14 +75,17 @@ const AdDetail = () => {
               )}
                   
               <Button
-                variant="success"
-                href={`https://wa.me/${ad.seller?.phone.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(ad.name)}`}
-                className="w-100 mt-2"
-                target="_blank"
-              >
-                <i className="bi bi-whatsapp me-2" />
-                Chat via WhatsApp
-              </Button>
+  variant="success"
+  href={`https://wa.me/${(ad.seller?.phone ?? '').replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(ad.name)}`}
+  className="w-100 mt-2"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <i className="bi bi-whatsapp me-2" />
+  Chat via WhatsApp
+</Button>
+
+               
               <StartChat adId={ad.id} productName={ad.name} />
 
             </Card>
