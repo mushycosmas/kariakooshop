@@ -11,7 +11,7 @@ interface ProductListProps {
   searchQuery?: string;
 }
 
-const CACHE_DURATION_MS = 15 * 60 * 1000;
+const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 const ProductList: React.FC<ProductListProps> = ({
   defaultCategory = "all",
@@ -23,6 +23,7 @@ const ProductList: React.FC<ProductListProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Load subcategory from localStorage on first render
   useEffect(() => {
     const savedSubcategory = localStorage.getItem("subcategoryId");
     if (savedSubcategory) {
@@ -30,10 +31,12 @@ const ProductList: React.FC<ProductListProps> = ({
     }
   }, []);
 
+  // Save subcategory selection to localStorage
   useEffect(() => {
     localStorage.setItem("subcategoryId", subcategoryId);
   }, [subcategoryId]);
 
+  // Fetch products from API or cache
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
@@ -92,10 +95,12 @@ const ProductList: React.FC<ProductListProps> = ({
     }
   };
 
+  // Fetch products when subcategory changes
   useEffect(() => {
     fetchProducts();
   }, [subcategoryId]);
 
+  // Filter products based on search query
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setFilteredProducts(products);
@@ -129,9 +134,10 @@ const ProductList: React.FC<ProductListProps> = ({
             <p className="text-center">No products found.</p>
           )}
 
-          <Row xs={1} sm={2} md={3} lg={4} className="g-3">
+          {/* Product Cards */}
+          <Row>
             {filteredProducts.map((product) => (
-              <Col key={product.id}>
+              <Col key={product.id} xs={12} sm={6} md={4} className="mb-4">
                 <ProductCard product={product} />
               </Col>
             ))}
