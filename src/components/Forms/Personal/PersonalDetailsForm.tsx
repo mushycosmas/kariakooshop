@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Form, Button, Row, Col, Container, Image } from 'react-bootstrap';
 import { useSession } from "next-auth/react";
+
 export default function PersonalDetailsForm() {
   const { data: session } = useSession();
-  const userId = session?.user?.id; // hardcoded for demo
+  const userId = session?.user?.id;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -33,33 +34,32 @@ export default function PersonalDetailsForm() {
     'Shinyanga Rural', 'Simiyu Region', 'Singida Region', 'Tabora Region',
     'Tanga Region', 'Zanzibar'
   ];
-  
-useEffect(() => {
-  if (!session?.user?.id) return; // ⛔️ Wait until session is loaded
 
-  const fetchUser = async () => {
-    try {
-      const res = await fetch(`/api/get_user/${session.user.id}`);
-      if (!res.ok) throw new Error('Failed to fetch user');
-      const { user } = await res.json();
+  useEffect(() => {
+    if (!userId) return;
 
-      setFirstName(user.first_name ?? '');
-      setLastName(user.last_name ?? '');
-      setLocation(user.location ?? 'Kinondoni');
-      setBirthday(user.birthday?.split('T')[0] ?? '');
-      setGender(user.gender ?? 'Male');
-      setPhone(user.phone ?? '');
-      setEmail(user.email ?? '');
-      setAddress(user.address ?? '');
-      if (user.avatar_url) setAvatarPreview(user.avatar_url);
-    } catch (err: any) {
-      setError(err.message || 'An unknown error occurred.');
-    }
-  };
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`/api/get_user/${userId}`);
+        if (!res.ok) throw new Error('Failed to fetch user');
+        const { user } = await res.json();
 
-  fetchUser();
-}, [session]);
+        setFirstName(user.first_name ?? '');
+        setLastName(user.last_name ?? '');
+        setLocation(user.location ?? 'Kinondoni');
+        setBirthday(user.birthday?.split('T')[0] ?? '');
+        setGender(user.gender ?? 'Male');
+        setPhone(user.phone ?? '');
+        setEmail(user.email ?? '');
+        setAddress(user.address ?? '');
+        if (user.avatar_url) setAvatarPreview(user.avatar_url);
+      } catch (err: any) {
+        setError(err.message || 'An unknown error occurred.');
+      }
+    };
 
+    fetchUser();
+  }, [userId]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,6 +76,12 @@ useEffect(() => {
     setError('');
 
     try {
+      if (!userId) {
+        setError("User not authenticated. Please log in again.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const formData = new FormData();
       formData.append('id', userId.toString());
       formData.append('firstName', firstName);
@@ -102,7 +108,7 @@ useEffect(() => {
       } else {
         setError(data.message || 'Something went wrong.');
       }
-    } catch (err: unknown) {
+    } catch {
       setError('Network error or server issue.');
     } finally {
       setIsSubmitting(false);
