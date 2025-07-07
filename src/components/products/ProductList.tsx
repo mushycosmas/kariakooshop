@@ -137,7 +137,7 @@ const ProductList: React.FC<ProductListProps> = ({
           {/* Product Cards */}
           <Row>
             {filteredProducts.map((product) => (
-              <Col key={product.id} xs={12} sm={6} md={4} className="mb-4">
+              <Col key={product.id} xs={12} sm={6} md={3} className="mb-4">
                 <ProductCard product={product} />
               </Col>
             ))}

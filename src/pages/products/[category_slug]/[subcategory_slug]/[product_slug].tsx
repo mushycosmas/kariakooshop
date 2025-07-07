@@ -36,9 +36,11 @@ const AdDetail = () => {
     );
   }
 
-  // Destructure seller safely with defaults
-  const seller = product.seller ?? {};
-  const avatar = seller.avatar || '/default-avatar.png';
+  // Destructure seller from product.user
+  const seller = product.user ?? {};
+  const avatar = seller.avatar_url
+    ? `https://kariakooplus.shop${seller.avatar_url}`
+    : '/default-avatar.png';
   const sellerName = seller.name || 'Unknown Seller';
   const phone = seller.phone || 'N/A';
   const email = seller.email || '';
@@ -47,10 +49,12 @@ const AdDetail = () => {
     <MainLayout>
       <Container className="mt-4">
         <Row>
+          {/* Ad Details */}
           <Col lg={8}>
             <AdsDetails product={product} />
           </Col>
 
+          {/* Seller Info Sidebar */}
           <Col lg={4}>
             <Card className="shadow-sm border rounded-3 p-3 text-center">
               <Image

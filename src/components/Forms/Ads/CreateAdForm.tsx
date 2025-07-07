@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { categories, subcategories, brands, models } from "../../../data/data";
 import { Button, Form, Row, Col, Alert, Image } from "react-bootstrap";
+import { useSession } from "next-auth/react";
 
 const CreateAdForm = () => {
+    const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [formData, setFormData] = useState({
-    user_id: 1,
+     user_id: null,
     name: "",
     product_description: "",
     price: "",
@@ -19,6 +22,18 @@ const CreateAdForm = () => {
     product_condition: "new",
     warranty: "",
   });
+
+
+  useEffect(() => {
+    if (userId) {
+      setFormData((prev) => ({
+        ...prev,
+        user_id: userId,
+      }));
+    }
+  }, [userId]);
+
+};
 
   const [previews, setPreviews] = useState<string[]>([]);
   const [error, setError] = useState("");

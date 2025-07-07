@@ -3,8 +3,9 @@ import GoogleProvider from "next-auth/providers/google";
 import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
 
+// Define the Google profile shape
 interface GoogleProfile {
-  id: string; // good to have but not necessarily required here
+  id: string;
   email: string;
   name?: string;
   picture?: string;
@@ -18,10 +19,13 @@ export default NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
+
   secret: process.env.NEXTAUTH_SECRET,
+
   session: {
     strategy: "jwt",
   },
+
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile?.email) {
@@ -30,26 +34,28 @@ export default NextAuth({
         const name = prof.name || "";
         const image = prof.picture || "";
 
-        // Check if user exists
+        // Check if user already exists
         const [rows] = await db.query<RowDataPacket[]>(
           "SELECT id FROM users WHERE email = ?",
           [email]
         );
 
-        // If not, insert new user
+        let userId: number;
+
         if (rows.length === 0) {
+          // Create a new user
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
-          await db.query(
+          const [result]: any = await db.query(
             `INSERT INTO users 
               (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
               name,
               "google",
-              firstName || "",
-              lastName || "",
+              firstName,
+              lastName,
               "", // location
               email,
               "", // password
@@ -60,20 +66,23 @@ export default NextAuth({
               image,
             ]
           );
-        }
-      }
 
-      // You can assign token.id here for consistency if you want
-      if (token.sub && !token.id) {
-        token.id = token.sub;
+          userId = result.insertId;
+        } else {
+          // Use existing user ID
+          userId = rows[0].id;
+        }
+
+        // Attach user ID to token
+        token.id = userId;
       }
 
       return token;
     },
 
     async session({ session, token }) {
-      if (session.user) {
-      //  session.user.id = token.id ?? ""; // use token.id if exists
+      if (session.user && token.id) {
+        (session.user as any).id = token.id;
       }
       return session;
     },

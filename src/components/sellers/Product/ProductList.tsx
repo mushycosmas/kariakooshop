@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
 import Link from 'next/link';
-
+import { useSession } from "next-auth/react";
 interface Product {
   id: number;
   name: string;
@@ -14,22 +14,29 @@ interface Product {
 const ProductList = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
 
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await fetch('/api/seller/products');
-        if (!res.ok) throw new Error('Failed to fetch products');
-        const data = await res.json();
-        setProducts(data.products || []);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
+  if (!userId) return; // Wait until session is ready
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(`/api/seller/products?user_id=${userId}`);
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      setProducts(data.products || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-    fetchProducts();
-  }, []);
+  };
+
+  fetchProducts();
+}, [userId]);
+
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;

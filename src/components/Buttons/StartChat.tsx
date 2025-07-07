@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import { Button, Collapse, Form } from 'react-bootstrap';
 import axios from 'axios';
 
-const StartChat = ({ adId, productName = "this ad" }) => {
+interface StartChatProps {
+  adId: number | string;
+  productName?: string;
+}
+
+const StartChat: React.FC<StartChatProps> = ({ adId, productName = 'this ad' }) => {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -45,6 +50,14 @@ const StartChat = ({ adId, productName = "this ad" }) => {
           fontWeight: 600,
           backgroundColor: '#fff',
         }}
+        role="button"
+        aria-expanded={open}
+        tabIndex={0}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setOpen(!open);
+          }
+        }}
       >
         <i className="bi bi-chat-dots-fill me-2" />
         Start Chat
@@ -69,6 +82,7 @@ const StartChat = ({ adId, productName = "this ad" }) => {
               className="mt-2 w-100"
               onClick={handleSend}
               disabled={sending}
+              type="button"
             >
               {sending ? 'Sending...' : 'Send'}
             </Button>

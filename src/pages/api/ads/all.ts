@@ -29,17 +29,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const whereSQL = whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : "";
 
-    // Main query to fetch ads with category & subcategory info
+    // Main query to fetch ads with category, subcategory, and user info
     const adQuery = `
       SELECT 
         a.*, 
         s.name AS subcategory_name, 
         s.slug AS subcategory_slug,
         c.name AS category_name, 
-        c.slug AS category_slug
+        c.slug AS category_slug,
+        u.id AS user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        u.avatar_url AS avatar_url,
+        u.phone AS user_phone
       FROM ads a
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
+      JOIN users u ON u.id = a.user_id
       ${whereSQL}
       ORDER BY a.created_at DESC
       LIMIT ? OFFSET ?
@@ -69,9 +75,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       imagesByAd[img.ad_id].push(img);
     });
 
-    // Combine ads with their images and category info, and use created_at for postedTime
+    // Combine ads with their images, category info, and user info
     const adsWithImages = (ads as any[]).map(ad => ({
-      ...ad,
+      id: ad.id,
+      name: ad.name,
+      price: ad.price,
+      description: ad.product_description,
+      created_at: ad.created_at,
+      status: ad.status,
+      slug: ad.slug,
       images: imagesByAd[ad.id] || [],
       category: {
         name: ad.category_name,
@@ -81,7 +93,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         name: ad.subcategory_name,
         slug: ad.subcategory_slug,
       },
-      postedTime: ad.created_at, // Use created_at instead of postedTime
+      user: {
+        id: ad.user_id,
+        name: ad.user_name,
+        email: ad.user_email,
+        phone: ad.user_phone,
+        avatar_url: ad.avatar_url,
+      },
+      postedTime: ad.created_at
     }));
 
     // Count total for pagination
@@ -90,10 +109,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       FROM ads a
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
+      JOIN users u ON u.id = a.user_id
       ${whereSQL}
     `;
 
-    // Remove limit and offset params for count
     const [countRows] = await db.query(countQuery, params.slice(0, params.length - 2));
     const total = (countRows as any)[0].total;
 

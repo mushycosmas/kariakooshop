@@ -1,20 +1,17 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Navbar, Nav, Container, NavDropdown, Badge } from 'react-bootstrap';
-import { useRouter } from 'next/navigation';
+import React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
 import {
   BsPlusSquare,
-  BsHeart,
   BsChatDots,
-  BsBell,
   BsPerson,
-  BsGear,
   BsSpeedometer2,
   BsBoxArrowRight,
-  BsPersonCircle
-} from 'react-icons/bs';
+  BsPersonCircle,
+} from "react-icons/bs";
 
 interface HeaderProps {
   isAuthenticated: boolean;
@@ -24,13 +21,31 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
   const router = useRouter();
 
-  const handleLogout = () => {
-    console.log('Logging out...');
-    router.push('/login'); // Replace with actual logout logic
+  const handleLogout = async () => {
+    try {
+      // Clear all client-side data
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Optional: clear cookies if using token-based auth
+      // document.cookie = "authToken=; Max-Age=0; path=/";
+
+      // Wait briefly to ensure cleanup before redirect
+      setTimeout(() => {
+        router.push("/");
+      }, 100);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (
-    <Navbar expand="lg" sticky="top" className="shadow-sm" style={{ backgroundColor: '#28a745' }}>
+    <Navbar
+      expand="lg"
+      sticky="top"
+      className="shadow-sm"
+      style={{ backgroundColor: "#28a745" }}
+    >
       <Container fluid>
         {/* Brand */}
         <Link href="/" className="navbar-brand fw-bold text-white">
@@ -42,30 +57,17 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
           <Nav className="ms-auto">
             {!isAuthenticated ? (
               <>
-                <Link href="/login" className="nav-link text-white">
-                  Login
-                </Link>
-                <Link href="/register" className="nav-link text-white">
-                  Register
-                </Link>
+                {/* Public Links (optional) */}
+                {/* <Link href="/login" className="nav-link text-white">Login</Link>
+                <Link href="/register" className="nav-link text-white">Register</Link> */}
               </>
             ) : (
               <>
                 <Link href="/seller/new-add" className="nav-link text-white">
                   <BsPlusSquare /> Sell
                 </Link>
-                {/* <Link href="/saved" className="nav-link text-white">
-                  <BsHeart /> Saved
-                </Link> */}
                 <Link href="/seller/messages" className="nav-link text-white">
                   <BsChatDots /> Messages
-                </Link>
-                <Link href="/notifications" className="nav-link text-white position-relative">
-                  <BsBell /> Notifications
-                  <Badge bg="danger" pill className="position-absolute top-0 start-100 translate-middle">
-                    3
-                    <span className="visually-hidden">unread notifications</span>
-                  </Badge>
                 </Link>
 
                 <NavDropdown
@@ -80,9 +82,6 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
                   <Link href="/seller/settings" className="dropdown-item">
                     <BsPerson /> My Profile
                   </Link>
-                  {/* <Link href="/settings" className="dropdown-item">
-                    <BsGear /> Settings
-                  </Link> */}
                   <Link href="/seller/dashboard" className="dropdown-item">
                     <BsSpeedometer2 /> Dashboard
                   </Link>

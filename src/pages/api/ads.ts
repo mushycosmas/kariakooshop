@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable, { File } from 'formidable';
 import fs from 'fs';
 import path from 'path';
-import { db } from '../../lib/db'; // Adjust as needed
+import { db } from '../../lib/db';
 
 export const config = {
   api: {
@@ -47,19 +47,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const price = parseFloat(toStringField(fields.price));
       const subcategory_id = parseInt(toStringField(fields.subcategory_id), 10);
       const status = toStringField(fields.status) || 'active';
+      const user_id = parseInt(toStringField(fields.user_id), 10);
 
-      if (!name || !product_description || isNaN(price) || isNaN(subcategory_id)) {
+      // 🔍 Validate and collect missing/invalid fields
+      const missingFields: string[] = [];
+      if (!name) missingFields.push('name');
+      if (!product_description) missingFields.push('product_description');
+      if (isNaN(price)) missingFields.push('price');
+      if (isNaN(subcategory_id)) missingFields.push('subcategory_id');
+      if (isNaN(user_id)) missingFields.push('user_id');
+
+      if (missingFields.length > 0) {
         await connection.rollback();
         connection.release();
-        return res.status(400).json({ message: 'Missing or invalid required fields' });
+        return res.status(400).json({
+          message: 'Missing or invalid required fields',
+          missingFields,
+        });
       }
-
-      // Replace with real user ID from session/auth
-      const user_id = 1;
 
       const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
-      // Insert into ads table
+      // ✅ Insert Ad
       const [result] = await connection.execute(
         `INSERT INTO ads (user_id, subcategory_id, name, slug, product_description, status, price) 
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -68,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const adId = (result as any).insertId;
 
-      // Handle uploaded images and insert into ad_images table
+      // 📸 Handle uploaded images
       const imageFiles = Array.isArray(files['images[]'])
         ? (files['images[]'] as File[])
         : files['images[]']
@@ -90,7 +99,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (error) {
       await connection.rollback();
       connection.release();
-
       console.error('Database error:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }

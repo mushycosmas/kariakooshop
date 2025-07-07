@@ -22,6 +22,14 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/[id]", "src/app/api/get-user/[id]/route.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "types",     // ✅ for your custom types like next-auth.d.ts
+    "src",       // ✅ include all components, pages, etc.
+    "pages"      // ✅ include your API and page routes here
+  ],
   "exclude": ["node_modules"]
 }
