@@ -11,11 +11,45 @@ const MenuBar = ({ editor }: { editor: any }) => {
 
   return (
     <div className="mb-2">
-      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleBold().run()} className="me-2"><b>B</b></Button>
-      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleItalic().run()} className="me-2"><i>I</i></Button>
-      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleStrike().run()} className="me-2">S</Button>
-      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleBulletList().run()} className="me-2">• List</Button>
-      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1. List</Button>
+      <Button
+        size="sm"
+        variant={editor.isActive('bold') ? 'primary' : 'light'}
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        className="me-2"
+      >
+        <b>B</b>
+      </Button>
+      <Button
+        size="sm"
+        variant={editor.isActive('italic') ? 'primary' : 'light'}
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        className="me-2"
+      >
+        <i>I</i>
+      </Button>
+      <Button
+        size="sm"
+        variant={editor.isActive('strike') ? 'primary' : 'light'}
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        className="me-2"
+      >
+        S
+      </Button>
+      <Button
+        size="sm"
+        variant={editor.isActive('bulletList') ? 'primary' : 'light'}
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        className="me-2"
+      >
+        • List
+      </Button>
+      <Button
+        size="sm"
+        variant={editor.isActive('orderedList') ? 'primary' : 'light'}
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+      >
+        1. List
+      </Button>
     </div>
   );
 };
@@ -28,6 +62,8 @@ interface Category {
 }
 
 const SimpleAdsForm = () => {
+  const { data: session, status } = useSession();
+
   const [form, setForm] = useState({
     name: '',
     price: '',
@@ -35,7 +71,7 @@ const SimpleAdsForm = () => {
     category_id: '',
     subcategory_id: '',
     status: 'active',
-    user_id: '', // ✅ Add user_id to the form state
+    user_id: '', // user id from session
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -44,7 +80,6 @@ const SimpleAdsForm = () => {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: session } = useSession();
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -54,17 +89,20 @@ const SimpleAdsForm = () => {
     },
   });
 
-  // Set user_id from session
+  // Set user_id from session when authenticated
   useEffect(() => {
-    if (session?.user?.id) {
-      setForm((prev) => ({ ...prev, user_id: session.user.id }));
+    if (status === 'authenticated' && session?.user?.id) {
+      setForm((prev) => ({ ...prev, user_id: String(session.user.id) }));
+      console.log('User ID set in form:', session.user.id);
     }
-  }, [session]);
+  }, [session, status]);
 
+  // Fetch categories on mount
   useEffect(() => {
     async function fetchCategories() {
       try {
         const res = await fetch('/api/all_categories');
+        if (!res.ok) throw new Error('Failed to fetch categories');
         const data: Category[] = await res.json();
         setCategories(data);
       } catch (error) {
@@ -75,6 +113,7 @@ const SimpleAdsForm = () => {
     fetchCategories();
   }, []);
 
+  // Update filtered subcategories when category changes
   useEffect(() => {
     if (form.category_id) {
       const category = categories.find((cat) => cat.id === form.category_id);
@@ -127,18 +166,22 @@ const SimpleAdsForm = () => {
       images.length === 0 ||
       !form.user_id
     ) {
-      setMessage('Please fill all required fields, add at least one image, and ensure user is logged in.');
+      setMessage('Please fill all required fields, add at least one image, and ensure you are logged in.');
       return;
     }
 
     setIsSubmitting(true);
     setMessage('');
 
-    const data = new FormData();
-    Object.entries(form).forEach(([key, value]) => data.append(key, value));
-    images.forEach((file) => data.append('images[]', file));
-
     try {
+      const data = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          data.append(key, value);
+        }
+      });
+      images.forEach((file) => data.append('images[]', file));
+
       const res = await fetch('/api/ads', {
         method: 'POST',
         body: data,
@@ -154,7 +197,7 @@ const SimpleAdsForm = () => {
           category_id: '',
           subcategory_id: '',
           status: 'active',
-          user_id: session?.user?.id || '',
+          user_id: session?.user?.id ? String(session.user.id) : '',
         });
         setImages([]);
         setPreviewUrls([]);
@@ -178,21 +221,38 @@ const SimpleAdsForm = () => {
         <Col md={6}>
           <Form.Group controlId="productName">
             <Form.Label>Product Name *</Form.Label>
-            <Form.Control type="text" name="name" value={form.name} onChange={handleChange} required />
+            <Form.Control
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              required
+            />
           </Form.Group>
         </Col>
 
         <Col md={3}>
           <Form.Group controlId="productPrice">
             <Form.Label>Price (TZS) *</Form.Label>
-            <Form.Control type="number" name="price" value={form.price} onChange={handleChange} required />
+            <Form.Control
+              type="number"
+              name="price"
+              value={form.price}
+              onChange={handleChange}
+              required
+            />
           </Form.Group>
         </Col>
 
         <Col md={3}>
           <Form.Group controlId="productCategory">
             <Form.Label>Main Category *</Form.Label>
-            <Form.Select name="category_id" value={form.category_id} onChange={handleChange} required>
+            <Form.Select
+              name="category_id"
+              value={form.category_id}
+              onChange={handleChange}
+              required
+            >
               <option value="">Select Category</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -216,7 +276,9 @@ const SimpleAdsForm = () => {
               disabled={!form.category_id || filteredSubcategories.length === 0}
             >
               <option value="">
-                {filteredSubcategories.length === 0 ? 'Select category first' : 'Select Subcategory'}
+                {filteredSubcategories.length === 0
+                  ? 'Select category first'
+                  : 'Select Subcategory'}
               </option>
               {filteredSubcategories.map((sub) => (
                 <option key={sub.id} value={sub.id}>
@@ -246,18 +308,31 @@ const SimpleAdsForm = () => {
 
       <Form.Group className="mb-3">
         <Form.Label>Upload Images *</Form.Label>
-        <Form.Control type="file" multiple accept="image/*" onChange={handleImageChange} />
+        <Form.Control
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleImageChange}
+          disabled={images.length >= 5}
+        />
       </Form.Group>
 
       <div className="d-flex flex-wrap gap-2 mb-3">
         {previewUrls.map((url, index) => (
           <div key={index} className="position-relative">
-            <Image src={url} thumbnail width={100} height={100} alt={`Preview ${index + 1}`} />
+            <Image
+              src={url}
+              thumbnail
+              width={100}
+              height={100}
+              alt={`Preview ${index + 1}`}
+            />
             <Button
               size="sm"
               variant="danger"
               onClick={() => removeImage(index)}
               className="position-absolute top-0 end-0 p-1"
+              aria-label={`Remove image ${index + 1}`}
             >
               &times;
             </Button>

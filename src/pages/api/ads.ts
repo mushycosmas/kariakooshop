@@ -10,6 +10,8 @@ export const config = {
   },
 };
 
+// ... your imports and config remain the same
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
@@ -49,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const status = toStringField(fields.status) || 'active';
       const user_id = parseInt(toStringField(fields.user_id), 10);
 
-      // 🔍 Validate and collect missing/invalid fields
+      // Validation
       const missingFields: string[] = [];
       if (!name) missingFields.push('name');
       if (!product_description) missingFields.push('product_description');
@@ -68,16 +70,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
-      // ✅ Insert Ad
+      // Insert Ad with seller_id = user_id
       const [result] = await connection.execute(
-        `INSERT INTO ads (user_id, subcategory_id, name, slug, product_description, status, price) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [user_id, subcategory_id, name, slug, product_description, status, price]
+        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, user_id, subcategory_id, name, slug, product_description, status, price]
       );
 
       const adId = (result as any).insertId;
 
-      // 📸 Handle uploaded images
+      // Handle images
       const imageFiles = Array.isArray(files['images[]'])
         ? (files['images[]'] as File[])
         : files['images[]']
