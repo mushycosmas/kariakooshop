@@ -13,7 +13,7 @@ const AdDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { status } = useSession();  // This tracks the authentication state
+  const { status } = useSession(); // Tracks authentication state
 
   useEffect(() => {
     const storedProduct = sessionStorage.getItem('selectedProduct');
@@ -39,10 +39,10 @@ const AdDetail = () => {
     );
   }
 
-  // Destructure seller from product.user
-  const seller = product.user ?? {};
-  const avatar = seller.avatar_url
-    ? `https://kariakooplus.shop${seller.avatar_url}`
+  // Destructure seller from product.seller (not user)
+  const seller = product.seller ?? {};
+  const avatar = seller.avatar
+    ? `https://kariakooplus.shop${seller.avatar}`
     : '/default-avatar.png';
   const sellerName = seller.name || 'Unknown Seller';
   const phone = seller.phone || 'N/A';
@@ -94,25 +94,25 @@ const AdDetail = () => {
                 Chat via WhatsApp
               </Button>
 
-              {/* Render StartChat component always */}
+              {/* Always render StartChat */}
               <StartChat adId={product.id} productName={product.name} />
 
-              {/* Conditional Login Prompt */}
-              {status === "unauthenticated" && (
+              {/* Show login prompt if unauthenticated */}
+              {status === 'unauthenticated' && (
                 <div
                   style={{
-                    position: "fixed",
-                    top: "6rem",
-                    right: "1rem",
-                    background: "white",
-                    border: "1px solid #ddd",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "4px",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                    position: 'fixed',
+                    top: '6rem',
+                    right: '1rem',
+                    background: 'white',
+                    border: '1px solid #ddd',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                     zIndex: 1000,
-                    cursor: "pointer",
+                    cursor: 'pointer',
                   }}
-                  onClick={() => signIn("google")}
+                  onClick={() => signIn('google')}
                   title="Sign in with Google"
                 >
                   🔒 Login with Google
