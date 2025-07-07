@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Collapse, Form } from 'react-bootstrap';
 import axios from 'axios';
+import { useSession, signIn } from 'next-auth/react';
 
 interface StartChatProps {
   adId: number | string;
@@ -11,9 +12,23 @@ const StartChat: React.FC<StartChatProps> = ({ adId, productName = 'this ad' }) 
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const { data: session, status } = useSession();
+
+  const userId = session?.user?.id;
 
   const handleSend = async () => {
     if (!message.trim()) return;
+
+    if (status === 'unauthenticated') {
+      // Redirect to login page
+      signIn(); // or signIn('google') for specific provider
+      return;
+    }
+
+    if (!userId) {
+      alert('User ID missing. Please re-login.');
+      return;
+    }
 
     setSending(true);
 
@@ -21,6 +36,7 @@ const StartChat: React.FC<StartChatProps> = ({ adId, productName = 'this ad' }) 
       const response = await axios.post('/api/chat/send-message', {
         adId,
         message,
+        buyerId: userId,
       });
 
       if (response.data.success) {
@@ -42,7 +58,13 @@ const StartChat: React.FC<StartChatProps> = ({ adId, productName = 'this ad' }) 
     <div className="mt-3">
       {/* Toggle Chat Button */}
       <div
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (status === 'unauthenticated') {
+            signIn(); // Redirect to login
+          } else {
+            setOpen(!open);
+          }
+        }}
         className="d-flex align-items-center justify-content-center border border-success rounded py-2 px-3"
         style={{
           cursor: 'pointer',
@@ -55,7 +77,11 @@ const StartChat: React.FC<StartChatProps> = ({ adId, productName = 'this ad' }) 
         tabIndex={0}
         onKeyPress={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
-            setOpen(!open);
+            if (status === 'unauthenticated') {
+              signIn();
+            } else {
+              setOpen(!open);
+            }
           }
         }}
       >

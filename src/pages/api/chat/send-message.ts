@@ -7,8 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { adId, message } = req.body;
-  const buyerId = 2; // default for now
+  const { adId, message,buyerId } = req.body;
+
 
   if (!adId || !message) {
     return res.status(400).json({ error: 'Missing adId or message' });

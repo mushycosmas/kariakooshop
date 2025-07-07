@@ -7,10 +7,13 @@ import StartChat from '@/components/Buttons/StartChat';
 import MainLayout from '@/components/MainLayout';
 import SafetyTipsCard from '@/components/Cards/SafetyTipsCard';
 import { Product } from '../../../../types/Product';
+import { signIn, useSession } from 'next-auth/react';
 
 const AdDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { status } = useSession();  // This tracks the authentication state
 
   useEffect(() => {
     const storedProduct = sessionStorage.getItem('selectedProduct');
@@ -90,7 +93,31 @@ const AdDetail = () => {
                 <i className="bi bi-whatsapp me-2" />
                 Chat via WhatsApp
               </Button>
+
+              {/* Render StartChat component always */}
               <StartChat adId={product.id} productName={product.name} />
+
+              {/* Conditional Login Prompt */}
+              {status === "unauthenticated" && (
+                <div
+                  style={{
+                    position: "fixed",
+                    top: "6rem",
+                    right: "1rem",
+                    background: "white",
+                    border: "1px solid #ddd",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                    zIndex: 1000,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => signIn("google")}
+                  title="Sign in with Google"
+                >
+                  🔒 Login with Google
+                </div>
+              )}
             </Card>
             <SafetyTipsCard />
           </Col>
