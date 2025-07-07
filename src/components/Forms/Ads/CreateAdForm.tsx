@@ -1,20 +1,36 @@
 "use client";
 
-import { useState ,useEffect} from "react";
+import { useState, useEffect } from "react";
 import { categories, subcategories, brands, models } from "../../../data/data";
 import { Button, Form, Row, Col, Alert, Image } from "react-bootstrap";
 import { useSession } from "next-auth/react";
 
+interface AdFormData {
+  user_id: number | null;
+  name: string;
+  product_description: string;
+  price: string;
+  status: string;
+  property_images: File[];
+  category_id: string;
+  subcategory_id: string;
+  brand_id: string;
+  model_id: string;
+  product_condition: string;
+  warranty: string;
+}
+
 const CreateAdForm = () => {
-    const { data: session } = useSession();
+  const { data: session } = useSession();
   const userId = session?.user?.id;
-  const [formData, setFormData] = useState({
-     user_id: null,
+
+  const [formData, setFormData] = useState<AdFormData>({
+    user_id: null,
     name: "",
     product_description: "",
     price: "",
     status: "active",
-    property_images: [] as File[],
+    property_images: [],
     category_id: "",
     subcategory_id: "",
     brand_id: "",
@@ -23,6 +39,9 @@ const CreateAdForm = () => {
     warranty: "",
   });
 
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -32,12 +51,6 @@ const CreateAdForm = () => {
       }));
     }
   }, [userId]);
-
-};
-
-  const [previews, setPreviews] = useState<string[]>([]);
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -86,7 +99,6 @@ const CreateAdForm = () => {
     setError("");
 
     const payload = new FormData();
-    // Append form fields to FormData
     for (const [key, value] of Object.entries(formData)) {
       if (key === "property_images") {
         formData.property_images.forEach((file) =>
@@ -98,9 +110,8 @@ const CreateAdForm = () => {
     }
 
     try {
-      // Simulate API call
       console.log("Submitting form", formData);
-      await new Promise((res) => setTimeout(res, 1500));
+      await new Promise((res) => setTimeout(res, 1500)); // Simulated API call
       alert("Ad created successfully!");
       setIsSubmitting(false);
     } catch (err) {
