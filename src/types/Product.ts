@@ -8,10 +8,15 @@ export interface Seller {
 
 export interface Product {
   id: number;
-  slug: string;               // <-- add this line
+  slug: string;
   name: string;
   price: number;
   product_description?: string;
-  // ... other fields
-  seller?: Seller;
+  user?: {
+    id?: number;
+    name?: string;
+    avatar_url?: string;
+    phone?: string;
+    email?: string;
+  };
 }

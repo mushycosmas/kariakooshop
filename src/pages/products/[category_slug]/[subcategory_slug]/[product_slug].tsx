@@ -40,10 +40,11 @@ const AdDetail = () => {
   }
 
   // Destructure seller from product.seller (not user)
-  const seller = product.seller ?? {};
-  const avatar = seller.avatar
-    ? `https://kariakooplus.shop${seller.avatar}`
-    : '/default-avatar.png';
+const seller = product.user ?? {};
+const avatar = seller.avatar_url
+  ? `https://kariakooplus.shop${seller.avatar_url}`
+  : '/default-avatar.png';
+
   const sellerName = seller.name || 'Unknown Seller';
   const phone = seller.phone || 'N/A';
   const email = seller.email || '';
@@ -58,69 +59,72 @@ const AdDetail = () => {
           </Col>
 
           {/* Seller Info Sidebar */}
-          <Col lg={4}>
-            <Card className="shadow-sm border rounded-3 p-3 text-center">
-              <Image
-                src={avatar}
-                roundedCircle
-                width={80}
-                height={80}
-                className="mb-3"
-                alt="Seller Avatar"
-              />
-              <h5 className="fw-bold mb-1">{sellerName}</h5>
-              <small className="text-muted">Verified Seller</small>
-              <hr />
-              <p>
-                <i className="bi bi-telephone-fill me-2" />
-                {phone}
-              </p>
-              {email && (
-                <p>
-                  <i className="bi bi-envelope-fill me-2" />
-                  {email}
-                </p>
-              )}
-              <Button
-                variant="success"
-                href={`https://wa.me/${phone.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(
-                  product.name
-                )}`}
-                className="w-100 mt-2"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <i className="bi bi-whatsapp me-2" />
-                Chat via WhatsApp
-              </Button>
+         <Col lg={4}>
+  <Card className="shadow-sm border rounded-3 p-3 text-center">
+    <Image
+      src={avatar}
+      roundedCircle
+      width={80}
+      height={80}
+      className="mb-3 mx-auto d-block" // ✅ Center the avatar
+      alt="Seller Avatar"
+    />
+    <h5 className="fw-bold mb-1">{sellerName}</h5>
+    <small className="text-muted">Verified Seller</small>
+    <hr />
+    <p>
+      <i className="bi bi-telephone-fill me-2" />
+      {phone}
+    </p>
+    {email && (
+      <p>
+        <i className="bi bi-envelope-fill me-2" />
+        {email}
+      </p>
+    )}
+    <Button
+      variant="success"
+      href={`https://wa.me/${phone.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(
+        product.name
+      )}`}
+      className="w-100 mt-2"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <i className="bi bi-whatsapp me-2" />
+      Chat via WhatsApp
+    </Button>
 
-              {/* Always render StartChat */}
-              <StartChat adId={product.id} productName={product.name} />
+    {/* Always render StartChat */}
+    <StartChat adId={product.id} productName={product.name} />
 
-              {/* Show login prompt if unauthenticated */}
-              {status === 'unauthenticated' && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    top: '6rem',
-                    right: '1rem',
-                    background: 'white',
-                    border: '1px solid #ddd',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '4px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                    zIndex: 1000,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => signIn('google')}
-                  title="Sign in with Google"
-                >
-                  🔒 Login with Google
-                </div>
-              )}
-            </Card>
-            <SafetyTipsCard />
-          </Col>
+    {/* Show login prompt if unauthenticated */}
+    {status === 'unauthenticated' && (
+      <div
+        style={{
+          position: 'fixed',
+          top: '6rem',
+          right: '1rem',
+          background: 'white',
+          border: '1px solid #ddd',
+          padding: '0.5rem 1rem',
+          borderRadius: '4px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          cursor: 'pointer',
+        }}
+        onClick={() => signIn('google')}
+        title="Sign in with Google"
+      >
+        🔒 Login with Google
+      </div>
+    )}
+  </Card>
+
+  {/* Safety Tips */}
+  <SafetyTipsCard />
+</Col>
+
         </Row>
       </Container>
     </MainLayout>
