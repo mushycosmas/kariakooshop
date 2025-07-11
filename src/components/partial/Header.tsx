@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import {
   BsPlusSquare,
   BsChatDots,
@@ -11,40 +11,33 @@ import {
   BsSpeedometer2,
   BsBoxArrowRight,
   BsPersonCircle,
-} from "react-icons/bs";
+} from 'react-icons/bs';
+import { useSession, signOut } from 'next-auth/react';
 
-interface HeaderProps {
-  isAuthenticated: boolean;
-  username?: string;
-}
-
-const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
+const Header: React.FC = () => {
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      // Clear all client-side data
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Optional: clear cookies if using token-based auth
-      // document.cookie = "authToken=; Max-Age=0; path=/";
-
-      // Wait briefly to ensure cleanup before redirect
-      setTimeout(() => {
-        router.push("/");
-      }, 100);
+      // Sign out using next-auth
+      await signOut({ redirect: false });
+      // Redirect manually after sign out
+      router.push('/');
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error('Logout failed:', error);
     }
   };
+
+  const isAuthenticated = status === 'authenticated';
+  const username = session?.user?.name || session?.user?.email || 'User';
 
   return (
     <Navbar
       expand="lg"
       sticky="top"
       className="shadow-sm"
-      style={{ backgroundColor: "#28a745" }}
+      style={{ backgroundColor: '#28a745' }}
     >
       <Container fluid>
         {/* Brand */}
@@ -57,9 +50,8 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
           <Nav className="ms-auto">
             {!isAuthenticated ? (
               <>
-                {/* Public Links (optional) */}
-                {/* <Link href="/login" className="nav-link text-white">Login</Link>
-                <Link href="/register" className="nav-link text-white">Register</Link> */}
+                {/* You can add public links here */}
+                {/* <Link href="/login" className="nav-link text-white">Login</Link> */}
               </>
             ) : (
               <>

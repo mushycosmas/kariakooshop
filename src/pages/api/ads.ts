@@ -10,8 +10,6 @@ export const config = {
   },
 };
 
-// ... your imports and config remain the same
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
@@ -50,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const subcategory_id = parseInt(toStringField(fields.subcategory_id), 10);
       const status = toStringField(fields.status) || 'active';
       const user_id = parseInt(toStringField(fields.user_id), 10);
+      const location = toStringField(fields.location).trim(); // ✅ Extract location
 
       // Validation
       const missingFields: string[] = [];
@@ -58,6 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (isNaN(price)) missingFields.push('price');
       if (isNaN(subcategory_id)) missingFields.push('subcategory_id');
       if (isNaN(user_id)) missingFields.push('user_id');
+      if (!location) missingFields.push('location'); // ✅ Validate location
 
       if (missingFields.length > 0) {
         await connection.rollback();
@@ -70,16 +70,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
-      // Insert Ad with seller_id = user_id
+      // ✅ Insert Ad with location
       const [result] = await connection.execute(
-        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [user_id, user_id, subcategory_id, name, slug, product_description, status, price]
+        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, user_id, subcategory_id, name, slug, product_description, status, price, location]
       );
 
       const adId = (result as any).insertId;
 
-      // Handle images
+      // ✅ Handle image upload
       const imageFiles = Array.isArray(files['images[]'])
         ? (files['images[]'] as File[])
         : files['images[]']

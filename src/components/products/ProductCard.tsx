@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import { Card } from "react-bootstrap";
-import { useRouter } from "next/navigation";
+import React from 'react';
+import { Card } from 'react-bootstrap';
+import { useRouter } from 'next/navigation';
 
 export interface ProductImage {
   id: number;
@@ -32,9 +32,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const firstImage = product.images?.[0]?.path;
 
   const handleClick = () => {
-    sessionStorage.setItem("selectedProduct", JSON.stringify(product));
-    const categorySlug = product.category?.slug || "category";
-    const subcategorySlug = product.subcategory?.slug || "subcategory";
+    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
+    const categorySlug = product.category?.slug || 'category';
+    const subcategorySlug = product.subcategory?.slug || 'subcategory';
     const productSlug = product.slug;
     router.push(`/products/${categorySlug}/${subcategorySlug}/${productSlug}`);
   };
@@ -43,7 +43,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <>
       <Card
         className="h-100 shadow-sm border rounded-3"
-        style={{ cursor: "pointer", overflow: "hidden" }}
+        style={{ cursor: 'pointer', overflow: 'hidden' }}
         onClick={handleClick}
       >
         {firstImage ? (
@@ -61,53 +61,52 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
 
         <Card.Body className="d-flex flex-column p-3">
+          {/* Product Name */}
           <Card.Title
-            className="mb-2 text-truncate"
+            className=" text-truncate"
             title={product.name}
-            style={{ fontWeight: 600, fontSize: "1rem" }}
+            style={{ fontWeight: 600, fontSize: '1rem', lineHeight: '1.3' }}
           >
             {product.name}
           </Card.Title>
 
+          {/* Price */}
           <div
+            className=""
             style={{
               fontWeight: 700,
-              color: "#198754",
-              fontSize: "1.1rem",
+              color: '#198754',
+              fontSize: '1.1rem',
             }}
           >
-            Tsh {product.price.toLocaleString(undefined, {
+            Tsh{' '}
+            {product.price.toLocaleString(undefined, {
               minimumFractionDigits: 2,
             })}
           </div>
 
+          {/* Location */}
           <div
-            className="mt-auto d-flex justify-content-between align-items-center text-muted pt-2"
-            style={{ fontSize: "0.85rem" }}
+            className="mt-auto d-flex justify-content-between align-items-center text-muted "
+            style={{ fontSize: '0.85rem' }}
           >
             <span>
               <i className="bi bi-geo-alt-fill me-1"></i>
-              {product.location || "Dar es Salaam"}
-            </span>
-            <span>
-              <i className="bi bi-clock-history me-1"></i>
-              {product.postedTime || "Just now"}
+              {product.location || 'Dar es Salaam'}
             </span>
           </div>
         </Card.Body>
       </Card>
 
-      {/* Internal CSS for responsive image height */}
       <style jsx>{`
         .product-img {
           width: 100%;
-          height: 300px;
+          height: 250px;
           object-fit: cover;
           object-position: center;
           border-top-left-radius: 0.3rem;
           border-top-right-radius: 0.3rem;
           user-select: none;
-          pointer-events: none;
         }
 
         @media (max-width: 576px) {

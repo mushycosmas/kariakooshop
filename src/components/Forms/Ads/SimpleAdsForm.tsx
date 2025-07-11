@@ -71,7 +71,8 @@ const SimpleAdsForm = () => {
     category_id: '',
     subcategory_id: '',
     status: 'active',
-    user_id: '', // user id from session
+    user_id: '',
+    location: '', // ✅ added location
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -89,15 +90,12 @@ const SimpleAdsForm = () => {
     },
   });
 
-  // Set user_id from session when authenticated
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.id) {
       setForm((prev) => ({ ...prev, user_id: String(session.user.id) }));
-      console.log('User ID set in form:', session.user.id);
     }
   }, [session, status]);
 
-  // Fetch categories on mount
   useEffect(() => {
     async function fetchCategories() {
       try {
@@ -113,7 +111,6 @@ const SimpleAdsForm = () => {
     fetchCategories();
   }, []);
 
-  // Update filtered subcategories when category changes
   useEffect(() => {
     if (form.category_id) {
       const category = categories.find((cat) => cat.id === form.category_id);
@@ -163,6 +160,7 @@ const SimpleAdsForm = () => {
       !form.price ||
       !form.category_id ||
       !form.subcategory_id ||
+      !form.location || // ✅ validate location
       images.length === 0 ||
       !form.user_id
     ) {
@@ -198,6 +196,7 @@ const SimpleAdsForm = () => {
           subcategory_id: '',
           status: 'active',
           user_id: session?.user?.id ? String(session.user.id) : '',
+          location: '', // ✅ reset location
         });
         setImages([]);
         setPreviewUrls([]);
@@ -286,6 +285,19 @@ const SimpleAdsForm = () => {
                 </option>
               ))}
             </Form.Select>
+          </Form.Group>
+        </Col>
+
+        <Col md={6}>
+          <Form.Group controlId="adLocation">
+            <Form.Label>Ad Location *</Form.Label>
+            <Form.Control
+              type="text"
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              required
+            />
           </Form.Group>
         </Col>
       </Row>

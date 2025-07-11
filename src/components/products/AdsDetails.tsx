@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Card } from 'react-bootstrap';
-
+import striptags from 'striptags'; 
 export interface ProductImage {
   path: string;
 }
@@ -24,7 +24,9 @@ interface AdsDetailsProps {
 const AdsDetails: React.FC<AdsDetailsProps> = ({ product }) => {
   const hasImages = Array.isArray(product.images) && product.images.length > 0;
   const [mainImageIndex, setMainImageIndex] = useState(0);
-
+ const cleanDescription = product.description
+    ? striptags(product.description)
+    : '';
   const images: ProductImage[] = hasImages
     ? product.images!
     : [{ path: '/no-image.png' }];
@@ -136,16 +138,16 @@ const AdsDetails: React.FC<AdsDetailsProps> = ({ product }) => {
               <i className="bi bi-geo-alt-fill me-1"></i>
               {product.location || 'Dar es Salaam'}
             </span>
-            <span>
+            {/* <span>
               <i className="bi bi-clock-history me-1"></i>
               {product.postedTime || '2 hrs ago'}
-            </span>
+            </span> */}
           </div>
 
           {/* Description */}
           {product.description && (
             <div className="mt-3" style={{ fontSize: '0.95rem' }}>
-              {product.description}
+              {cleanDescription}
             </div>
           )}
         </Card.Body>
