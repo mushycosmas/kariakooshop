@@ -15,10 +15,14 @@ export default function GoogleOneTap() {
   const router = useRouter();
 
   useEffect(() => {
-    // Don't run if user is already authenticated
-    if (status === "loading" || session) return;
+    // Check if session exists, if so, redirect to dashboard
+    if (status === "loading") return; // Don't do anything while loading
+    if (session) {
+      router.push('/seller/dashboard'); // Redirect to seller dashboard if session exists
+      return;
+    }
 
-    // Disable in development
+    // If in development, prevent Google One Tap from loading
     if (process.env.NODE_ENV === "development") return;
 
     const onLoad = () => {
@@ -28,9 +32,7 @@ export default function GoogleOneTap() {
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
         callback: async (response: any) => {
           if (response.credential) {
-            // Here we will handle the login and save the user data to the database
-
-            // Call NextAuth's signIn function to authenticate the user
+            // Sign in with credentials after getting the ID token
             const res = await fetch('/api/auth/callback/credentials', {
               method: 'POST',
               body: JSON.stringify({ idToken: response.credential }),
@@ -40,15 +42,16 @@ export default function GoogleOneTap() {
             });
 
             if (res.ok) {
-              // If login is successful, redirect to the homepage
-              router.push('/');
+              // After successful login, the session should be available
+              // Redirect to seller dashboard
+              router.push('/seller/dashboard');
             } else {
-              // Handle error (optional: show a message)
-              router.push('/auth/login'); // Redirect to login page if something fails
+              // Handle error if authentication fails
+              router.push('/auth/login'); // Redirect to login if something goes wrong
             }
           }
         },
-        auto_select: true, // Auto select the account if it exists
+        auto_select: true, // Automatically select the account if it exists
         cancel_on_tap_outside: false,
         use_fedcm_for_prompt: false,
       });

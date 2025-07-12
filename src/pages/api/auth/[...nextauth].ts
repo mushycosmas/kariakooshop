@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
 
+// Define the GoogleProfile interface
 interface GoogleProfile {
   id: string;
   email: string;
@@ -12,6 +13,7 @@ interface GoogleProfile {
 }
 
 export default NextAuth({
+  // Configure Google login provider
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -19,13 +21,16 @@ export default NextAuth({
     }),
   ],
 
+  // Secret for JWT tokens (should be kept secure)
   secret: process.env.NEXTAUTH_SECRET,
 
   session: {
-    strategy: "jwt",
+    strategy: "jwt", // Store session in JWT
   },
 
+  // Define custom callbacks
   callbacks: {
+    // JWT callback to handle token creation or updates
     async jwt({ token, account, profile }) {
       if (account && profile?.email) {
         const prof = profile as GoogleProfile;
@@ -33,7 +38,7 @@ export default NextAuth({
         const name = prof.name || "";
         const image = prof.picture || "";
 
-        // Check if user exists
+        // Check if user exists in the database
         const [rows] = await db.query<RowDataPacket[]>(
           "SELECT id FROM users WHERE email = ?",
           [email]
@@ -42,47 +47,61 @@ export default NextAuth({
         let userId: number;
 
         if (rows.length === 0) {
-          // Split name into first and last
+          // If user does not exist, insert a new user record
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
-          // Insert new user with correct NULLs and enum values
           const [result]: any = await db.query(
             `INSERT INTO users 
               (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
               name,
-              "seller",     // user_type must be one of enum: 'seller','customer','google'
+              "google", // User type set to 'google' for Google sign-ins
               firstName,
               lastName,
-              null,         // location NULL if none
+              null, // Location set to NULL
               email,
-              "",           // password blank string (or store hashed if you want)
-              "",           // phone blank string if none
-              null,         // gender must be 'male','female' or NULL, never empty string
-              null,         // birthday NULL if none
-              "",           // address blank string if none
-              image,
+              "", // Password (empty as it's Google login)
+              "", // Phone (empty)
+              null, // Gender (empty)
+              null, // Birthday (empty)
+              "", // Address (empty)
+              image, // Avatar URL from Google
             ]
           );
 
-          userId = result.insertId;
+          userId = result.insertId; // Get the ID of the newly created user
         } else {
+          // If user already exists, use their existing ID
           userId = rows[0].id;
         }
 
+        // Attach user ID to the token
         token.id = userId;
       }
 
       return token;
     },
 
+    // Session callback to include the user ID in the session object
     async session({ session, token }) {
       if (session.user && token.id) {
-        (session.user as any).id = token.id;
+        (session.user as any).id = token.id; // Add the user ID to session
       }
       return session;
     },
+
+    // Redirect callback to define where to send users after sign-in
+    async redirect({ url, baseUrl }) {
+      // Redirect to the seller dashboard after login
+      return baseUrl + "/seller/dashboard";
+    },
+  },
+
+  // Custom pages for sign-in and errors
+  pages: {
+    signIn: "/auth/login",  // Custom login page
+    error: "/auth/error",   // Custom error page (if needed)
   },
 });
