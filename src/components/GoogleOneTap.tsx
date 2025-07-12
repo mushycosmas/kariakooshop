@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { signIn } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 
 declare global {
   interface Window {
@@ -10,8 +10,11 @@ declare global {
 }
 
 export default function GoogleOneTap() {
+  const { data: session, status } = useSession();
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    // Don't run if user is already authenticated
+    if (status === "loading" || session) return;
 
     // Disable in development
     if (process.env.NODE_ENV === "development") return;
@@ -47,7 +50,7 @@ export default function GoogleOneTap() {
     return () => {
       document.body.removeChild(script);
     };
-  }, []);
+  }, [session, status]);
 
   return null;
 }
