@@ -3,7 +3,7 @@
 import React from 'react';
 import { Col, Row } from 'react-bootstrap';
 import { Product } from '../../types/Product';
-import ProductCard from './ProductCard'; // make sure this path is correct
+import ProductCard from './ProductCard'; // Make sure this path is correct
 
 interface SimilarAdsProps {
   currentProduct: Product;
@@ -11,15 +11,17 @@ interface SimilarAdsProps {
 }
 
 const SimilarAds: React.FC<SimilarAdsProps> = ({ currentProduct, products = [] }) => {
-  if (!currentProduct.category) return null; // no category, no similar ads
+  // If current product has no category, we cannot show similar ads
+  if (!currentProduct.category) return null;
 
   const currentCategorySlug = currentProduct.category.slug;
 
-  // Filter products in the same category excluding the current product
+  // Filter products by same category but exclude current product
   const similar = products.filter(
     (p) => p.id !== currentProduct.id && p.category?.slug === currentCategorySlug
   );
 
+  // If no similar products found, don't render anything
   if (similar.length === 0) return null;
 
   return (

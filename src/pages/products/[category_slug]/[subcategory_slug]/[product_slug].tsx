@@ -20,7 +20,6 @@ const AdDetail = () => {
 
   const { status } = useSession();
 
-  // Load selected product from sessionStorage
   useEffect(() => {
     const storedProduct = sessionStorage.getItem('selectedProduct');
     if (storedProduct) {
@@ -29,7 +28,6 @@ const AdDetail = () => {
     setLoadingProduct(false);
   }, []);
 
-  // Fetch all products from API or cache (similar to your ProductList)
   useEffect(() => {
     const fetchAllProducts = async () => {
       setLoadingAllProducts(true);
@@ -172,10 +170,13 @@ const AdDetail = () => {
           </Col>
         </Row>
 
-        {/* Similar Ads */}
         <Row className="mt-5">
           <Col>
-            <SimilarAds currentProduct={product} products={allProducts} />
+            {/* Only pass products if category exists */}
+            <SimilarAds
+              currentProduct={product}
+              products={product.category ? allProducts : []}
+            />
           </Col>
         </Row>
       </Container>
