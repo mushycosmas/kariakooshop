@@ -1,3 +1,5 @@
+'use client';
+
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable, { File } from 'formidable';
 import fs from 'fs';
@@ -10,7 +12,10 @@ export const config = {
   },
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -48,16 +53,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const subcategory_id = parseInt(toStringField(fields.subcategory_id), 10);
       const status = toStringField(fields.status) || 'active';
       const user_id = parseInt(toStringField(fields.user_id), 10);
-      const location = toStringField(fields.location).trim(); // ✅ Extract location
+      const location = toStringField(fields.location).trim();
 
-      // Validation
+      // Validate required fields
       const missingFields: string[] = [];
       if (!name) missingFields.push('name');
       if (!product_description) missingFields.push('product_description');
       if (isNaN(price)) missingFields.push('price');
       if (isNaN(subcategory_id)) missingFields.push('subcategory_id');
       if (isNaN(user_id)) missingFields.push('user_id');
-      if (!location) missingFields.push('location'); // ✅ Validate location
+      if (!location) missingFields.push('location');
 
       if (missingFields.length > 0) {
         await connection.rollback();
@@ -68,18 +73,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+      const slug =
+        name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
-      // ✅ Insert Ad with location
+      // Insert ad
       const [result] = await connection.execute(
-        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location) 
+        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [user_id, user_id, subcategory_id, name, slug, product_description, status, price, location]
+        [
+          user_id,
+          user_id,
+          subcategory_id,
+          name,
+          slug,
+          product_description,
+          status,
+          price,
+          location,
+        ]
       );
 
       const adId = (result as any).insertId;
 
-      // ✅ Handle image upload
+      // Insert images
       const imageFiles = Array.isArray(files['images[]'])
         ? (files['images[]'] as File[])
         : files['images[]']
@@ -98,11 +114,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       connection.release();
 
       return res.status(200).json({ message: 'Ad saved successfully!' });
-    } catch (error) {
+    } catch (error: any) {
       await connection.rollback();
       connection.release();
+
       console.error('Database error:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+
+      // Safer error for production: only expose detailed error if in development
+      const safeError =
+        process.env.NODE_ENV === 'development'
+          ? error?.sqlMessage || error?.message || 'Unknown database error'
+          : 'Internal server error';
+
+      return res.status(500).json({
+        message: 'Database error occurred',
+        error: safeError,
+      });
     }
   });
 }
