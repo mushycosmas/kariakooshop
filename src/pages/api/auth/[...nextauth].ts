@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
+import { getSession } from "next-auth/react"; // Import getSession
 
 // Define the GoogleProfile interface
 interface GoogleProfile {
@@ -95,14 +96,14 @@ export default NextAuth({
     // Redirect callback to define where to send users after sign-in
     async redirect({ url, baseUrl }) {
       // Check if the user is already authenticated before redirecting
-      const session = await getServerSession();
+      const session = await getSession(); // Use getSession here to check the session
       if (session) {
-        // If the user is logged in, don't redirect
-        return url; // Use the default URL or keep it as is
+        // If the user is logged in, don't redirect again
+        return url; // Stay on the current page or go to the default URL
       }
-      
+
       // Otherwise, perform the redirect after login
-      return baseUrl + "/seller/dashboard";
+      return baseUrl + "/seller/dashboard"; // Redirect to dashboard if not logged in
     },
   },
 
