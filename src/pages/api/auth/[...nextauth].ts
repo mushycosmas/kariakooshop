@@ -3,7 +3,6 @@ import GoogleProvider from "next-auth/providers/google";
 import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
 
-// Define the Google profile shape
 interface GoogleProfile {
   id: string;
   email: string;
@@ -34,7 +33,6 @@ export default NextAuth({
         const name = prof.name || "";
         const image = prof.picture || "";
 
-        // Check if user already exists
         const [rows] = await db.query<RowDataPacket[]>(
           "SELECT id FROM users WHERE email = ?",
           [email]
@@ -43,7 +41,6 @@ export default NextAuth({
         let userId: number;
 
         if (rows.length === 0) {
-          // Create a new user
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
@@ -53,27 +50,25 @@ export default NextAuth({
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
               name,
-              "google",
+              "seller", // ✅ Always seller
               firstName,
               lastName,
-              "", // location
+              "",
               email,
-              "", // password
-              "", // phone
-              "", // gender
-              null, // birthday
-              "", // address
+              "",
+              "",
+              "",
+              null,
+              "",
               image,
             ]
           );
 
           userId = result.insertId;
         } else {
-          // Use existing user ID
           userId = rows[0].id;
         }
 
-        // Attach user ID to token
         token.id = userId;
       }
 
