@@ -94,7 +94,14 @@ export default NextAuth({
 
     // Redirect callback to define where to send users after sign-in
     async redirect({ url, baseUrl }) {
-      // Redirect to the seller dashboard after login
+      // Check if the user is already authenticated before redirecting
+      const session = await getServerSession();
+      if (session) {
+        // If the user is logged in, don't redirect
+        return url; // Use the default URL or keep it as is
+      }
+      
+      // Otherwise, perform the redirect after login
       return baseUrl + "/seller/dashboard";
     },
   },
