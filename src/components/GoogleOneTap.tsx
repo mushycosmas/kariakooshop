@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation"; // For routing
 
 declare global {
   interface Window {
@@ -11,6 +12,7 @@ declare global {
 
 export default function GoogleOneTap() {
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     // Don't run if user is already authenticated
@@ -26,13 +28,14 @@ export default function GoogleOneTap() {
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
         callback: (response: any) => {
           if (response.credential) {
-            signIn("credentials", {
-              idToken: response.credential,
-              redirect: false,
-            });
+            // Automatically sign in the user with the received idToken
+            window.google.accounts.id.disableAutoSelect(); // Optional: Disable auto-select
+
+            // Redirect automatically after successful login
+            router.push("/dashboard");  // Redirect to user's dashboard or account page
           }
         },
-        auto_select: true,
+        auto_select: true, // Auto select the account if it exists
         cancel_on_tap_outside: false,
         use_fedcm_for_prompt: false,
       });
@@ -50,7 +53,7 @@ export default function GoogleOneTap() {
     return () => {
       document.body.removeChild(script);
     };
-  }, [session, status]);
+  }, [session, status, router]);
 
   return null;
 }
