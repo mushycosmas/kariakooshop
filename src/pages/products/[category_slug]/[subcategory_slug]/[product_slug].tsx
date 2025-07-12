@@ -3,27 +3,80 @@
 import { useEffect, useState } from 'react';
 import { Container, Row, Col, Spinner, Alert, Card, Button, Image } from 'react-bootstrap';
 import AdsDetails from '@/components/products/AdsDetails';
+import SimilarAds from '@/components/products/SimilarAds';
 import StartChat from '@/components/Buttons/StartChat';
 import MainLayout from '@/components/MainLayout';
 import SafetyTipsCard from '@/components/Cards/SafetyTipsCard';
 import { Product } from '../../../../types/Product';
 import { signIn, useSession } from 'next-auth/react';
 
+const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 const AdDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loadingProduct, setLoadingProduct] = useState(true);
+  const [loadingAllProducts, setLoadingAllProducts] = useState(true);
 
-  const { status } = useSession(); // Tracks authentication state
+  const { status } = useSession();
 
+  // Load selected product from sessionStorage
   useEffect(() => {
     const storedProduct = sessionStorage.getItem('selectedProduct');
     if (storedProduct) {
       setProduct(JSON.parse(storedProduct) as Product);
     }
-    setLoading(false);
+    setLoadingProduct(false);
   }, []);
 
-  if (loading) {
+  // Fetch all products from API or cache (similar to your ProductList)
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      setLoadingAllProducts(true);
+      const cacheKey = 'all_products_cache';
+      const cached = localStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const now = Date.now();
+
+          if (parsed?.data && parsed.timestamp && now - parsed.timestamp < CACHE_DURATION_MS) {
+            setAllProducts(parsed.data);
+            setLoadingAllProducts(false);
+            return;
+          } else {
+            localStorage.removeItem(cacheKey);
+          }
+        } catch {
+          localStorage.removeItem(cacheKey);
+        }
+      }
+
+      try {
+        const res = await fetch('/api/ads/all');
+        if (!res.ok) throw new Error('Failed to fetch products');
+        const data = await res.json();
+        const fetchedProducts = data.products || [];
+
+        setAllProducts(fetchedProducts);
+
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify({ data: fetchedProducts, timestamp: Date.now() })
+        );
+      } catch (err) {
+        console.error('Error fetching all products:', err);
+        setAllProducts([]);
+      } finally {
+        setLoadingAllProducts(false);
+      }
+    };
+
+    fetchAllProducts();
+  }, []);
+
+  if (loadingProduct || loadingAllProducts) {
     return (
       <div className="text-center py-5">
         <Spinner animation="border" />
@@ -39,12 +92,10 @@ const AdDetail = () => {
     );
   }
 
-  // Destructure seller from product.seller (not user)
-const seller = product.user ?? {};
-const avatar = seller.avatar_url
-  ? `https://kariakooplus.shop${seller.avatar_url}`
-  : '/default-avatar.png';
-
+  const seller = product.user ?? {};
+  const avatar = seller.avatar_url
+    ? `https://kariakooplus.shop${seller.avatar_url}`
+    : '/default-avatar.png';
   const sellerName = seller.name || 'Unknown Seller';
   const phone = seller.phone || 'N/A';
   const email = seller.email || '';
@@ -53,80 +104,80 @@ const avatar = seller.avatar_url
     <MainLayout>
       <Container className="mt-4">
         <Row>
-          {/* Ad Details */}
           <Col lg={8}>
             <AdsDetails product={product} />
           </Col>
 
-          {/* Seller Info Sidebar */}
-         <Col lg={4}>
-  <Card className="shadow-sm border rounded-3 p-3 text-center">
-    <Image
-      src={avatar}
-      roundedCircle
-      width={80}
-      height={80}
-      className="mb-3 mx-auto d-block" // ✅ Center the avatar
-      alt="Seller Avatar"
-    />
-    <h5 className="fw-bold mb-1">{sellerName}</h5>
-    <small className="text-muted">Verified Seller</small>
-    <hr />
-    <p>
-      <i className="bi bi-telephone-fill me-2" />
-      {phone}
-    </p>
-    {email && (
-      <p>
-        <i className="bi bi-envelope-fill me-2" />
-        {email}
-      </p>
-    )}
-    <Button
-      variant="success"
-      href={`https://wa.me/${phone.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(
-        product.name
-      )}`}
-      className="w-100 mt-2"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <i className="bi bi-whatsapp me-2" />
-      Chat via WhatsApp
-    </Button>
+          <Col lg={4}>
+            <Card className="shadow-sm border rounded-3 p-3 text-center">
+              <Image
+                src={avatar}
+                roundedCircle
+                width={80}
+                height={80}
+                className="mb-3 mx-auto d-block"
+                alt="Seller Avatar"
+              />
+              <h5 className="fw-bold mb-1">{sellerName}</h5>
+              <small className="text-muted">Verified Seller</small>
+              <hr />
+              <p>
+                <i className="bi bi-telephone-fill me-2" />
+                {phone}
+              </p>
+              {email && (
+                <p>
+                  <i className="bi bi-envelope-fill me-2" />
+                  {email}
+                </p>
+              )}
+              <Button
+                variant="success"
+                href={`https://wa.me/${phone.replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(
+                  product.name
+                )}`}
+                className="w-100 mt-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="bi bi-whatsapp me-2" />
+                Chat via WhatsApp
+              </Button>
 
-    {/* Always render StartChat */}
-    <StartChat adId={product.id} productName={product.name} />
+              <StartChat adId={product.id} productName={product.name} />
 
-    {/* Show login prompt if unauthenticated */}
-    {status === 'unauthenticated' && (
-      <div
-        style={{
-          position: 'fixed',
-          top: '6rem',
-          right: '1rem',
-          background: 'white',
-          border: '1px solid #ddd',
-          padding: '0.5rem 1rem',
-          borderRadius: '4px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          cursor: 'pointer',
-        }}
-        onClick={() => signIn('google')}
-        title="Sign in with Google"
-      >
-        🔒 Login with Google
-      </div>
-    )}
-  </Card>
+              {status === 'unauthenticated' && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: '6rem',
+                    right: '1rem',
+                    background: 'white',
+                    border: '1px solid #ddd',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                    zIndex: 1000,
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => signIn('google')}
+                  title="Sign in with Google"
+                >
+                  🔒 Login with Google
+                </div>
+              )}
+            </Card>
 
-  {/* Safety Tips */}
-  <SafetyTipsCard />
-</Col>
-
+            <SafetyTipsCard />
+          </Col>
         </Row>
-          {/* <SimilarAds currentProduct={product} products={allProducts} /> */}
+
+        {/* Similar Ads */}
+        <Row className="mt-5">
+          <Col>
+            <SimilarAds currentProduct={product} products={allProducts} />
+          </Col>
+        </Row>
       </Container>
     </MainLayout>
   );

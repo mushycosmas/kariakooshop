@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Card, Col, Row } from 'react-bootstrap';
-import Link from 'next/link';
+import { Col, Row } from 'react-bootstrap';
 import { Product } from '../../types/Product';
+import ProductCard from './ProductCard'; // make sure this path is correct
 
 interface SimilarAdsProps {
   currentProduct: Product;
@@ -11,16 +11,14 @@ interface SimilarAdsProps {
 }
 
 const SimilarAds: React.FC<SimilarAdsProps> = ({ currentProduct, products = [] }) => {
-  if (!currentProduct.category) return null; // no category, no similar
+  if (!currentProduct.category) return null; // no category, no similar ads
 
   const currentCategorySlug = currentProduct.category.slug;
 
-  const similar = products.filter((p) => {
-    return (
-      p.id !== currentProduct.id &&
-      p.category?.slug === currentCategorySlug
-    );
-  });
+  // Filter products in the same category excluding the current product
+  const similar = products.filter(
+    (p) => p.id !== currentProduct.id && p.category?.slug === currentCategorySlug
+  );
 
   if (similar.length === 0) return null;
 
@@ -30,19 +28,7 @@ const SimilarAds: React.FC<SimilarAdsProps> = ({ currentProduct, products = [] }
       <Row>
         {similar.map((ad) => (
           <Col md={4} key={ad.id} className="mb-4">
-            <Link href={`/ads/${ad.slug}`} passHref>
-              <Card className="h-100 shadow-sm" style={{ cursor: 'pointer' }}>
-                <Card.Img
-                  variant="top"
-                  src={ad.images?.[0]?.path || '/placeholder.png'}
-                  alt={ad.name}
-                />
-                <Card.Body>
-                  <Card.Title>{ad.name}</Card.Title>
-                  <Card.Text>Tsh {ad.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Card.Text>
-                </Card.Body>
-              </Card>
-            </Link>
+            <ProductCard product={ad} />
           </Col>
         ))}
       </Row>
