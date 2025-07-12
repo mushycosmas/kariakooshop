@@ -21,7 +21,7 @@ const AdDetail = () => {
     const fetchAd = async () => {
       try {
         const res = await axios.get(`/api/ads/${slug}`);
-        setAd(res.data); // assumes ad.seller contains seller info
+        setAd(res.data); // assumes ad.user contains user info
       } catch (error) {
         console.error('Error fetching ad:', error);
       } finally {
@@ -44,31 +44,31 @@ const AdDetail = () => {
             <AdsDetails product={ad} />
           </Col>
 
-          {/* Seller Info Sidebar */}
+          {/* user Info Sidebar */}
           <Col lg={4}>
             <Card className="shadow-sm border rounded-3 p-3 text-center">
               {/* Avatar (use dynamic or static fallback) */}
               <Image
-                src={ad.seller?.avatar || "/seller-avatar.jpg"}
+                src={ad.user?.avatar_url || "/user-avatar.jpg"}
                 roundedCircle
                 width={80}
                 height={80}
                 className="mb-3"
-                alt="Seller Avatar"
+                alt="user Avatar"
               />
 
-              {/* Seller Info */}
-              <h5 className="fw-bold mb-1">{ad.seller?.name}</h5>
-              <small className="text-muted">Verified Seller</small>
+              {/* user Info */}
+              <h5 className="fw-bold mb-1">{ad.user?.name}</h5>
+              <small className="text-muted">Verified user</small>
               <hr />
-              <p><i className="bi bi-telephone-fill me-2" />{ad.seller?.phone}</p>
-              {ad.seller?.email && (
-                <p><i className="bi bi-envelope-fill me-2" />{ad.seller.email}</p>
+              <p><i className="bi bi-telephone-fill me-2" />{ad.user?.phone}</p>
+              {ad.user?.email && (
+                <p><i className="bi bi-envelope-fill me-2" />{ad.user.email}</p>
               )}
 
               <Button
                 variant="success"
-                href={`https://wa.me/${(ad.seller?.phone ?? '').replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(ad.name)}`}
+                href={`https://wa.me/${(ad.user?.phone ?? '').replace(/\s|\+/g, '')}?text=Hi%2C%20I'm%20interested%20in%20your%20product%20${encodeURIComponent(ad.name)}`}
                 className="w-100 mt-2"
                 target="_blank"
                 rel="noopener noreferrer"
