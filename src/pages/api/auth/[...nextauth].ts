@@ -46,25 +46,27 @@ export default NextAuth({
           const lastName = lastParts.join(" ");
 
           // Insert new user with proper NULLs and valid enums
-          const [result]: any = await db.query(
-            `INSERT INTO users 
-              (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-            [
-              name,
-              "seller",     // user_type enum value exactly as defined
-              firstName,
-              lastName,
-              null,         // location NULL
-              email,
-              "",           // password empty string (or null if allowed)
-              "",           // phone empty string
-              null,         // gender NULL (must be null or 'male' or 'female')
-              null,         // birthday NULL
-              "",           // address empty string
-              image,
-            ]
-          );
+        
+        const [result]: any = await db.query(
+  `INSERT INTO users 
+    (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+  [
+    name,
+    "seller",           // user_type must be exact enum string
+    firstName,
+    lastName,
+    null,               // location nullable: pass null if no value
+    email,
+    "",                 // password blank string or hash
+    "",                 // phone blank string if no phone
+    null,               // gender must be null or 'male' or 'female', never empty string
+    null,               // birthday null
+    "",                 // address blank string if none
+    image,
+  ]
+);
+
 
           userId = result.insertId;
         } else {
