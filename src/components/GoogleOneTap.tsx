@@ -26,13 +26,26 @@ export default function GoogleOneTap() {
 
       window.google.accounts.id.initialize({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-        callback: (response: any) => {
+        callback: async (response: any) => {
           if (response.credential) {
-            // Automatically sign in the user with the received idToken
-            window.google.accounts.id.disableAutoSelect(); // Optional: Disable auto-select
+            // Here we will handle the login and save the user data to the database
 
-            // Redirect automatically after successful login
-            router.push("/dashboard");  // Redirect to user's dashboard or account page
+            // Call NextAuth's signIn function to authenticate the user
+            const res = await fetch('/api/auth/callback/credentials', {
+              method: 'POST',
+              body: JSON.stringify({ idToken: response.credential }),
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (res.ok) {
+              // If login is successful, redirect to the homepage
+              router.push('/');
+            } else {
+              // Handle error (optional: show a message)
+              router.push('/auth/login'); // Redirect to login page if something fails
+            }
           }
         },
         auto_select: true, // Auto select the account if it exists
