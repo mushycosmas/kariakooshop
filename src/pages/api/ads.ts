@@ -1,5 +1,3 @@
-'use client';
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable, { File } from 'formidable';
 import fs from 'fs';
@@ -12,10 +10,7 @@ export const config = {
   },
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -34,7 +29,7 @@ export default async function handler(
   form.parse(req, async (err, fields, files) => {
     if (err) {
       console.error('Form parse error:', err);
-      return res.status(500).json({ message: 'Form parsing error' });
+      return res.status(500).json({ message: 'Form parsing error', error: err.message });
     }
 
     function toStringField(field: string | string[] | undefined): string {
@@ -55,7 +50,7 @@ export default async function handler(
       const user_id = parseInt(toStringField(fields.user_id), 10);
       const location = toStringField(fields.location).trim();
 
-      // Validate required fields
+      // Validation
       const missingFields: string[] = [];
       if (!name) missingFields.push('name');
       if (!product_description) missingFields.push('product_description');
@@ -73,29 +68,17 @@ export default async function handler(
         });
       }
 
-      const slug =
-        name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+      const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
-      // Insert ad
       const [result] = await connection.execute(
-        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location)
+        `INSERT INTO ads (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          user_id,
-          user_id,
-          subcategory_id,
-          name,
-          slug,
-          product_description,
-          status,
-          price,
-          location,
-        ]
+        [user_id, user_id, subcategory_id, name, slug, product_description, status, price, location]
       );
 
       const adId = (result as any).insertId;
 
-      // Insert images
+      // Handle image upload
       const imageFiles = Array.isArray(files['images[]'])
         ? (files['images[]'] as File[])
         : files['images[]']
@@ -117,18 +100,13 @@ export default async function handler(
     } catch (error: any) {
       await connection.rollback();
       connection.release();
-
       console.error('Database error:', error);
 
-      // Safer error for production: only expose detailed error if in development
-      const safeError =
-        process.env.NODE_ENV === 'development'
-          ? error?.sqlMessage || error?.message || 'Unknown database error'
-          : 'Internal server error';
+      const mysqlError = error?.sqlMessage || error?.message || 'Unknown database error';
 
       return res.status(500).json({
         message: 'Database error occurred',
-        error: safeError,
+        error: mysqlError,
       });
     }
   });
