@@ -3,10 +3,10 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import SellerDashboardLayout from '../../components/SellerDashboardLayout';
+import SellerDashboardLayout from "../../components/SellerDashboardLayout";
 
 const Page = () => {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession(); // Get session from NextAuth
   const router = useRouter();
 
   useEffect(() => {

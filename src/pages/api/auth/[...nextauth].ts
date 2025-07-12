@@ -95,15 +95,15 @@ export default NextAuth({
 
     // Redirect callback to define where to send users after sign-in
     async redirect({ url, baseUrl }) {
-      // Use getSession here to check if user is already logged in
+      // Check if the user is already logged in (session exists)
       const session = await getSession();
       if (session) {
-        // If user is logged in, don't redirect again and allow them to stay
-        return url; // Stay on the current page or go to the default URL
+        // Always redirect logged-in users to the Home page (`/`)
+        return "/";
       }
 
-      // If the user is not logged in, perform the redirect
-      return baseUrl + "/seller/dashboard"; // Redirect to dashboard after login
+      // If the user is not logged in, redirect them to the home page (default)
+      return baseUrl; // Default redirect to home page
     },
   },
 
