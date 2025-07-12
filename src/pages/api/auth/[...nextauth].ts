@@ -33,6 +33,7 @@ export default NextAuth({
         const name = prof.name || "";
         const image = prof.picture || "";
 
+        // Check if user exists
         const [rows] = await db.query<RowDataPacket[]>(
           "SELECT id FROM users WHERE email = ?",
           [email]
@@ -44,26 +45,26 @@ export default NextAuth({
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
-        const [result]: any = await db.query(
-  `INSERT INTO users 
-    (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-  [
-    name,
-    "seller",       // user_type always "seller"
-    firstName,
-    lastName,
-    null,           // location set to NULL
-    email,
-    "",
-    "",
-    null,           // gender set to NULL
-    null,           // birthday set to NULL
-    "",
-    image,
-  ]
-);
-
+          // Insert new user with proper NULLs and valid enums
+          const [result]: any = await db.query(
+            `INSERT INTO users 
+              (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            [
+              name,
+              "seller",     // user_type enum value exactly as defined
+              firstName,
+              lastName,
+              null,         // location NULL
+              email,
+              "",           // password empty string (or null if allowed)
+              "",           // phone empty string
+              null,         // gender NULL (must be null or 'male' or 'female')
+              null,         // birthday NULL
+              "",           // address empty string
+              image,
+            ]
+          );
 
           userId = result.insertId;
         } else {
