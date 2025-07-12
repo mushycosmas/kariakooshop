@@ -1,25 +1,20 @@
-
 'use client';
 
 import React, { useState } from 'react';
 import { Card } from 'react-bootstrap';
 import striptags from 'striptags';
-import SimilarAds from './SimilarAds'; // adjust path as needed
 import { Product } from '../../types/Product';
 
 interface AdsDetailsProps {
   product: Product;
-  allProducts: Product[];
 }
 
-const AdsDetails: React.FC<AdsDetailsProps> = ({ product, allProducts }) => {
+const AdsDetails: React.FC<AdsDetailsProps> = ({ product }) => {
   const hasImages = Array.isArray(product.images) && product.images.length > 0;
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const cleanDescription = product.description ? striptags(product.description) : '';
 
-  const images = hasImages
-    ? product.images!
-    : [{ path: '/no-image.png' }];
+  const images = hasImages ? product.images! : [{ path: '/no-image.png' }];
 
   return (
     <>
@@ -122,9 +117,6 @@ const AdsDetails: React.FC<AdsDetailsProps> = ({ product, allProducts }) => {
           )}
         </Card.Body>
       </Card>
-
-      {/* 📣 Similar Ads Section */}
-      <SimilarAds currentProduct={product} products={allProducts} />
     </>
   );
 };
