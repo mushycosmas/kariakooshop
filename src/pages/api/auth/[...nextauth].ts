@@ -2,9 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
-import { getSession } from "next-auth/react"; // Import getSession
 
-// Define the GoogleProfile interface
 interface GoogleProfile {
   id: string;
   email: string;
@@ -14,7 +12,6 @@ interface GoogleProfile {
 }
 
 export default NextAuth({
-  // Configure Google login provider
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -22,16 +19,13 @@ export default NextAuth({
     }),
   ],
 
-  // Secret for JWT tokens (should be kept secure)
   secret: process.env.NEXTAUTH_SECRET,
 
   session: {
-    strategy: "jwt", // Store session in JWT
+    strategy: "jwt",  // Use JWT for session management
   },
 
-  // Define custom callbacks
   callbacks: {
-    // JWT callback to handle token creation or updates
     async jwt({ token, account, profile }) {
       if (account && profile?.email) {
         const prof = profile as GoogleProfile;
@@ -48,7 +42,7 @@ export default NextAuth({
         let userId: number;
 
         if (rows.length === 0) {
-          // If user does not exist, insert a new user record
+          // User does not exist, insert new user
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
@@ -58,23 +52,23 @@ export default NextAuth({
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
               name,
-              "google", // User type set to 'google' for Google sign-ins
+              "seller",  // User type
               firstName,
               lastName,
-              null, // Location set to NULL
+              null,       // location
               email,
-              "", // Password (empty as it's Google login)
-              "", // Phone (empty)
-              null, // Gender (empty)
-              null, // Birthday (empty)
-              "", // Address (empty)
-              image, // Avatar URL from Google
+              "",         // password
+              "",         // phone
+              null,        // gender
+              null,        // birthday
+              "",         // address
+              image,       // avatar_url
             ]
           );
 
-          userId = result.insertId; // Get the ID of the newly created user
+          userId = result.insertId;
         } else {
-          // If user already exists, use their existing ID
+          // Existing user
           userId = rows[0].id;
         }
 
@@ -85,31 +79,16 @@ export default NextAuth({
       return token;
     },
 
-    // Session callback to include the user ID in the session object
     async session({ session, token }) {
       if (session.user && token.id) {
-        (session.user as any).id = token.id; // Add the user ID to session
+        session.user.id = token.id;  // Attach user ID to the session
       }
       return session;
     },
 
-    // Redirect callback to define where to send users after sign-in
     async redirect({ url, baseUrl }) {
-      // Check if the user is already logged in (session exists)
-      const session = await getSession();
-      if (session) {
-        // Always redirect logged-in users to the Home page (`/`)
-        return "/";
-      }
-
-      // If the user is not logged in, redirect them to the home page (default)
-      return baseUrl; // Default redirect to home page
+      // If user is authenticated, redirect to the seller dashboard
+      return baseUrl + "/seller/dashboard";
     },
-  },
-
-  // Custom pages for sign-in and errors
-  pages: {
-    signIn: "/auth/login",  // Custom login page
-    error: "/auth/error",   // Custom error page (if needed)
   },
 });

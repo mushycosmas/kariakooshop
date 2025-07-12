@@ -15,10 +15,10 @@ const HomePage = () => {
       <head>
         <title>Home | Your E-Commerce Platform</title>
         <meta name="description" content="Find amazing products for all your needs. Browse our catalog now!" />
-        <meta property="og:title" content="Home | Your E-Commerce Platform" />
+        <meta property="og:title" content="Home | kariakooplus Platform" />
         <meta property="og:description" content="Explore a wide range of products. Free delivery on selected items!" />
         <meta property="og:image" content="/images/hero-banner.jpg" />
-        <meta property="og:url" content="https://yourdomain.com" />
+        <meta property="og:url" content="https://kariakooplus.shop" />
       </head>
 
       <HeroSection searchQuery={searchQuery} setSearchQuery={setSearchQuery} />

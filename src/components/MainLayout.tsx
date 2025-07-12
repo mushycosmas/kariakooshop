@@ -16,13 +16,15 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="d-flex flex-column min-vh-100 position-relative">
       <GoogleOneTap />
 
-      {/* ✅ Pass props to Header */}
+      {/* Pass session props to Header */}
       <Header isAuthenticated={isAuthenticated} username={username} />
 
+      {/* Render the page content */}
       <main className="flex-fill">{children}</main>
 
       <Footer />
 
+      {/* Display login button if user is unauthenticated */}
       {status === "unauthenticated" && (
         <div
           style={{
