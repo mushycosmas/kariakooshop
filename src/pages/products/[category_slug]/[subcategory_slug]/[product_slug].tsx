@@ -126,6 +126,7 @@ const avatar = seller.avatar_url
 </Col>
 
         </Row>
+          {/* <SimilarAds currentProduct={product} products={allProducts} /> */}
       </Container>
     </MainLayout>
   );

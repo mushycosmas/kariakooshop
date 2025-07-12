@@ -2,18 +2,22 @@
 
 import React from "react";
 import { useSession, signIn } from "next-auth/react";
-import GoogleOneTap from "./GoogleOneTap"; // Adjust path if needed
+import GoogleOneTap from "./GoogleOneTap";
 import Header from "./partial/Header";
 import Footer from "./partial/Footer";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession();
 
+  const isAuthenticated = status === "authenticated";
+  const username = session?.user?.name || session?.user?.email || "Guest";
+
   return (
     <div className="d-flex flex-column min-vh-100 position-relative">
       <GoogleOneTap />
 
-      <Header isAuthenticated={!!session} username={session?.user?.name || "Guest"} />
+      {/* ✅ Pass props to Header */}
+      <Header isAuthenticated={isAuthenticated} username={username} />
 
       <main className="flex-fill">{children}</main>
 

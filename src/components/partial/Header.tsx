@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React from 'react';
 import Link from 'next/link';
@@ -12,25 +12,25 @@ import {
   BsBoxArrowRight,
   BsPersonCircle,
 } from 'react-icons/bs';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 
-const Header: React.FC = () => {
-  const { data: session, status } = useSession();
+// ✅ Add props type
+interface HeaderProps {
+  isAuthenticated: boolean;
+  username: string;
+}
+
+const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      // Sign out using next-auth
       await signOut({ redirect: false });
-      // Redirect manually after sign out
       router.push('/');
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
-
-  const isAuthenticated = status === 'authenticated';
-  const username = session?.user?.name || session?.user?.email || 'User';
 
   return (
     <Navbar
@@ -40,7 +40,6 @@ const Header: React.FC = () => {
       style={{ backgroundColor: '#28a745' }}
     >
       <Container fluid>
-        {/* Brand */}
         <Link href="/" className="navbar-brand fw-bold text-white">
           KariakooPlus
         </Link>
@@ -50,8 +49,7 @@ const Header: React.FC = () => {
           <Nav className="ms-auto">
             {!isAuthenticated ? (
               <>
-                {/* You can add public links here */}
-                {/* <Link href="/login" className="nav-link text-white">Login</Link> */}
+                {/* Add public links here if needed */}
               </>
             ) : (
               <>

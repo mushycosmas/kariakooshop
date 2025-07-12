@@ -144,6 +144,7 @@ const ProductList: React.FC<ProductListProps> = ({
           </Row>
         </Col>
       </Row>
+      
     </Container>
   );
 };
