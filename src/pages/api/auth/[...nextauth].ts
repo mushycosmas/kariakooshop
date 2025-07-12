@@ -42,31 +42,30 @@ export default NextAuth({
         let userId: number;
 
         if (rows.length === 0) {
+          // Split name into first and last
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
-          // Insert new user with proper NULLs and valid enums
-        
-        const [result]: any = await db.query(
-  `INSERT INTO users 
-    (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-  [
-    name,
-    "seller",           // user_type must be exact enum string
-    firstName,
-    lastName,
-    null,               // location nullable: pass null if no value
-    email,
-    "",                 // password blank string or hash
-    "",                 // phone blank string if no phone
-    null,               // gender must be null or 'male' or 'female', never empty string
-    null,               // birthday null
-    "",                 // address blank string if none
-    image,
-  ]
-);
-
+          // Insert new user with correct NULLs and enum values
+          const [result]: any = await db.query(
+            `INSERT INTO users 
+              (name, user_type, first_name, last_name, location, email, password, phone, gender, birthday, address, avatar_url, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            [
+              name,
+              "seller",     // user_type must be one of enum: 'seller','customer','google'
+              firstName,
+              lastName,
+              null,         // location NULL if none
+              email,
+              "",           // password blank string (or store hashed if you want)
+              "",           // phone blank string if none
+              null,         // gender must be 'male','female' or NULL, never empty string
+              null,         // birthday NULL if none
+              "",           // address blank string if none
+              image,
+            ]
+          );
 
           userId = result.insertId;
         } else {
