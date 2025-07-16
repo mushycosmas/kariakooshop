@@ -18,11 +18,9 @@ export default NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
-
   secret: process.env.NEXTAUTH_SECRET,
-
   session: {
-    strategy: "jwt",  // Use JWT for session management
+    strategy: "jwt", // Use JWT-based session
   },
 
   callbacks: {
@@ -42,7 +40,7 @@ export default NextAuth({
         let userId: number;
 
         if (rows.length === 0) {
-          // User does not exist, insert new user
+          // Create a new user if not found
           const [firstName, ...lastParts] = name.split(" ");
           const lastName = lastParts.join(" ");
 
@@ -52,27 +50,26 @@ export default NextAuth({
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
               name,
-              "seller",  // User type
+              "seller", // User type (since all users are sellers)
               firstName,
               lastName,
-              null,       // location
+              null, // location
               email,
-              "",         // password
-              "",         // phone
-              null,        // gender
-              null,        // birthday
-              "",         // address
-              image,       // avatar_url
+              "", // password
+              "", // phone
+              null, // gender
+              null, // birthday
+              "", // address
+              image, // avatar_url
             ]
           );
-
           userId = result.insertId;
         } else {
           // Existing user
           userId = rows[0].id;
         }
 
-        // Attach user ID to the token
+        // Add user ID to JWT token
         token.id = userId;
       }
 
@@ -81,14 +78,11 @@ export default NextAuth({
 
     async session({ session, token }) {
       if (session.user && token.id) {
-        session.user.id = token.id;  // Attach user ID to the session
+        session.user.id = token.id; // Attach user ID to the session
       }
       return session;
     },
 
-    async redirect({ url, baseUrl }) {
-      // If user is authenticated, redirect to the seller dashboard
-      return baseUrl + "/seller/dashboard";
-    },
+   
   },
 });

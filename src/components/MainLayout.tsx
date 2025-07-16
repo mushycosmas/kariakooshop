@@ -8,6 +8,11 @@ import Footer from "./partial/Footer";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession();
+  
+  // This will show a loading indicator while the session state is being fetched
+  if (status === "loading") {
+    return <div>Loading...</div>; // You can customize this with a spinner or some other indicator
+  }
 
   const isAuthenticated = status === "authenticated";
   const username = session?.user?.name || session?.user?.email || "Guest";
@@ -16,10 +21,8 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="d-flex flex-column min-vh-100 position-relative">
       <GoogleOneTap />
 
-      {/* Pass session props to Header */}
       <Header isAuthenticated={isAuthenticated} username={username} />
 
-      {/* Render the page content */}
       <main className="flex-fill">{children}</main>
 
       <Footer />
@@ -39,7 +42,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             zIndex: 1000,
             cursor: "pointer",
           }}
-          onClick={() => signIn("google")}
+          onClick={() => signIn("google", { callbackUrl: "/" })}
           title="Sign in with Google"
         >
           🔒 Login with Google

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation"; // For routing
@@ -11,15 +9,19 @@ declare global {
 }
 
 export default function GoogleOneTap() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession(); // Get the current session status
   const router = useRouter();
 
   useEffect(() => {
-    // Check if session exists, if so, redirect to dashboard
-    if (status === "loading") return; // Don't do anything while loading
+    // If session is loading, do nothing, just wait
+    if (status === "loading") return;
+
+    // If session exists, user is logged in and can navigate freely
     if (session) {
-      router.push('/seller/dashboard'); // Redirect to seller dashboard if session exists
-      return;
+      console.log('User is logged in:', session);
+    } else {
+      console.log('User is not logged in');
+      // Optionally, you can show a login prompt or perform other actions when there's no session
     }
 
     // If in development, prevent Google One Tap from loading
@@ -32,7 +34,7 @@ export default function GoogleOneTap() {
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
         callback: async (response: any) => {
           if (response.credential) {
-            // Sign in with credentials after getting the ID token
+            // After getting the credential, send it to your API for validation
             const res = await fetch('/api/auth/callback/credentials', {
               method: 'POST',
               body: JSON.stringify({ idToken: response.credential }),
@@ -42,12 +44,11 @@ export default function GoogleOneTap() {
             });
 
             if (res.ok) {
-              // After successful login, the session should be available
-              // Redirect to seller dashboard
-              router.push('/seller/dashboard');
+              // Successfully logged in, the session should be set by next-auth
+              const sessionData = await res.json();
+              console.log('Session data after Google login:', sessionData);
             } else {
-              // Handle error if authentication fails
-              router.push('/auth/login'); // Redirect to login if something goes wrong
+              console.error('Failed to log in');
             }
           }
         },
@@ -59,6 +60,7 @@ export default function GoogleOneTap() {
       window.google.accounts.id.prompt();
     };
 
+    // Load Google One Tap script dynamically
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
@@ -67,9 +69,10 @@ export default function GoogleOneTap() {
     document.body.appendChild(script);
 
     return () => {
+      // Cleanup script when the component is unmounted
       document.body.removeChild(script);
     };
   }, [session, status, router]);
 
-  return null;
+  return null; // Nothing to render as this component handles auth silently
 }

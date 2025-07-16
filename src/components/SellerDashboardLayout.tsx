@@ -1,17 +1,33 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation"; // Next 13 app directory navigation
 import SellerSidebar from "./partial/SellerSidebar";
 import Header from "./partial/Header";
 import Footer from "./partial/Footer";
 
 const SellerDashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  // Getting the session from NextAuth
   const { data: session, status } = useSession();
-  const isAuthenticated = status === "authenticated"; // Checking if the user is authenticated
-  const username = session?.user?.name || session?.user?.email || "Guest"; // Displaying username or email
+  const router = useRouter();
+
+  const isAuthenticated = status === "authenticated";
+  const username = session?.user?.name || session?.user?.email || "Guest";
+
+  useEffect(() => {
+    if (status === "loading") return; // wait for session status to resolve
+
+    if (!session) {
+      // Not authenticated — redirect to home page
+      router.push('/');
+    }
+  }, [session, status, router]);
+
+  if (!isAuthenticated) {
+    // Optionally show a loading or redirect message while redirecting
+    return <p>Redirecting to Home...</p>;
+  }
 
   return (
     <Container fluid className="min-vh-100 bg-light">
@@ -25,11 +41,11 @@ const SellerDashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <Col md={10} className="p-0">
           {/* Header */}
           <Header isAuthenticated={isAuthenticated} username={username} />
-          
+
           {/* Page Content */}
           <main className="p-4">{children}</main>
         </Col>
-        
+
         {/* Footer */}
         <Footer />
       </Row>
