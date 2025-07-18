@@ -31,26 +31,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const firstImage = product.images?.[0]?.path;
 
-  const handleClick = async () => {
-  sessionStorage.setItem('selectedProduct', JSON.stringify(product));
-
-  const categorySlug = product.category?.slug || 'category';
-  const subcategorySlug = product.subcategory?.slug || 'subcategory';
-  const productSlug = product.slug;
-
-  try {
-    await fetch(`/api/ads/${productSlug}/view`, {
-      method: 'POST',
-    });
-  } catch (error) {
-    console.error('Failed to increment view count:', error);
-  }
-
-  // Redirect (you can choose one of these)
-  router.push(`/products/${categorySlug}/${subcategorySlug}/${productSlug}`);
-  window.location.href = `/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
-};
-
+   const handleClick = async () => {
+    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
+    const categorySlug = product.category?.slug || 'category';
+    const subcategorySlug = product.subcategory?.slug || 'subcategory';
+    const productSlug = product.slug;
+      try {
+      await fetch(`/api/ads/${productSlug}/view`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error('Failed to increment view count:', error);
+    }
+    router.push(`/products/${categorySlug}/${subcategorySlug}/${productSlug}`);
+    const url = `/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
+    window.location.href = url; // Forces full page reload
+  };
 
   return (
     <>

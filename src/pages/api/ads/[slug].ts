@@ -2,37 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { db } from '../../../lib/db';
 import { RowDataPacket } from 'mysql2/promise';
 
-interface Seller {
-  id: number;
-  name: string;
-  avatar?: string | null;
-}
-
 interface Image extends RowDataPacket {
   path: string;
+  ad_id: number;
 }
-
-interface Ad extends RowDataPacket {
-  id: number;
-  name: string;
-  slug: string;
-  product_description: string;
-  price: number;
-  status: string;
-  subcategory_id: number;
-  user_id: number;
-  created_at?: string;
-  updated_at?: string;
-  images?: Image[];
-  seller?: Seller;
-}
-
-// Static seller data (you can customize this)
-const STATIC_SELLER: Seller = {
-  id: 1,
-  name: "Exact Manpower Consulting Ltd",
-  avatar: "/static/images/default-seller-avatar.png", // or null if none
-};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -40,44 +13,79 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { slug } = req.query;
+  console.log("Kelvin Cosmas",slug);
 
   if (!slug || typeof slug !== 'string') {
     return res.status(400).json({ message: 'Invalid slug' });
   }
 
-  const connection = await db.getConnection();
-
   try {
-    // Fetch ad by slug only (no join)
-    const [ads] = await connection.execute<Ad[]>(
-      `SELECT * FROM ads WHERE slug = ? LIMIT 1`,
+    // Fetch the ad and join with category, subcategory, and user
+    const [ads] = await db.query(
+      `
+      SELECT 
+        a.*, 
+        s.name AS subcategory_name, 
+        s.slug AS subcategory_slug,
+        c.name AS category_name, 
+        c.slug AS category_slug,
+        u.id AS user_id,
+        u.name AS user_name,
+        u.email AS user_email,
+        u.avatar_url,
+        u.phone AS user_phone
+      FROM ads a
+      JOIN sub_categories s ON s.id = a.subcategory_id
+      JOIN categories c ON c.id = s.category_id
+      JOIN users u ON u.id = a.user_id
+      WHERE a.slug = ?
+      LIMIT 1
+    `,
       [slug]
     );
 
-    if (ads.length === 0) {
-      connection.release();
+    if ((ads as RowDataPacket[]).length === 0) {
       return res.status(404).json({ message: 'Ad not found' });
     }
 
-    const ad = ads[0];
+    const ad = (ads as any[])[0];
 
-    // Attach static seller data here
-    ad.seller = STATIC_SELLER;
-
-    // Fetch images for the ad
-    const [images] = await connection.execute<Image[]>(
-      `SELECT path FROM ad_images WHERE ad_id = ?`,
+    // Fetch related images
+    const [images] = await db.query<Image[]>(
+      `SELECT * FROM ad_images WHERE ad_id = ?`,
       [ad.id]
     );
 
-    connection.release();
+    const result = {
+      id: ad.id,
+      name: ad.name,
+      price: ad.price,
+      description: ad.product_description,
+      created_at: ad.created_at,
+      status: ad.status,
+      slug: ad.slug,
+      images: images || [],
+      category: {
+        name: ad.category_name,
+        slug: ad.category_slug,
+      },
+      subcategory: {
+        name: ad.subcategory_name,
+        slug: ad.subcategory_slug,
+      },
+      user: {
+        id: ad.user_id,
+        name: ad.user_name,
+        email: ad.user_email,
+        phone: ad.user_phone,
+        avatar_url: ad.avatar_url,
+      },
+      postedTime: ad.created_at,
+    };
 
-    ad.images = images;
-
-    return res.status(200).json(ad);
+    return res.status(200).json(result);
   } catch (error) {
-    console.error('Database error:', error);
-    connection.release();
+    console.error('Error fetching ad by slug:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
