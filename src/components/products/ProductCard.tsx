@@ -90,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           >
             Tsh{' '}
             {product.price.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
+              minimumFractionDigits: 0,
             })}
           </div>
 
