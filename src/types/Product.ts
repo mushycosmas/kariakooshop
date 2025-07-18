@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   description?: string;
   location:string;
+  viewed:number;
   created_at?: string;
   images?: { id: number; ad_id: number; path: string }[];
   category?: { name: string; slug: string };

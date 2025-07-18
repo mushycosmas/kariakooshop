@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation"; // For routing
 
 declare global {
@@ -19,9 +19,10 @@ export default function GoogleOneTap() {
     // If session exists, user is logged in and can navigate freely
     if (session) {
       console.log('User is logged in:', session);
+      // Optionally, you can redirect users who are already logged in
+      router.push('/seller/dashboard'); // Example: Redirect logged-in users
     } else {
       console.log('User is not logged in');
-      // Optionally, you can show a login prompt or perform other actions when there's no session
     }
 
     // If in development, prevent Google One Tap from loading
@@ -34,7 +35,7 @@ export default function GoogleOneTap() {
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
         callback: async (response: any) => {
           if (response.credential) {
-            // After getting the credential, send it to your API for validation
+            // After getting the credential, send it to your API for validation and session creation
             const res = await fetch('/api/auth/callback/credentials', {
               method: 'POST',
               body: JSON.stringify({ idToken: response.credential }),
@@ -44,9 +45,23 @@ export default function GoogleOneTap() {
             });
 
             if (res.ok) {
-              // Successfully logged in, the session should be set by next-auth
+              // Get session data after login
               const sessionData = await res.json();
               console.log('Session data after Google login:', sessionData);
+
+              // Use NextAuth's `signIn` method to authenticate the session
+              // Pass the 'google' provider and idToken to the signIn function
+              signIn('credentials', { 
+                token: response.credential,
+                redirect: false,
+              }).then((response) => {
+                // If signIn was successful, redirect the user
+                if (response?.ok) {
+                  router.push('/seller/dashboard'); // Redirect to dashboard after successful login
+                } else {
+                  console.error('Error signing in via Google');
+                }
+              });
             } else {
               console.error('Failed to log in');
             }
@@ -57,6 +72,7 @@ export default function GoogleOneTap() {
         use_fedcm_for_prompt: false,
       });
 
+      // Prompt for Google One Tap to sign in the user
       window.google.accounts.id.prompt();
     };
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Row, Col, Badge, Spinner } from 'react-bootstrap';
 import Link from 'next/link';
 import { useSession } from "next-auth/react";
+
 interface Product {
   id: number;
   name: string;
@@ -9,6 +10,7 @@ interface Product {
   stock?: number;
   image_url?: string;
   status: string;
+  viewed?: number; // 👈 included viewed
 }
 
 const ProductList = () => {
@@ -17,26 +19,24 @@ const ProductList = () => {
   const { data: session } = useSession();
   const userId = session?.user?.id;
 
-
   useEffect(() => {
-  if (!userId) return; // Wait until session is ready
+    if (!userId) return;
 
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch(`/api/seller/products?user_id=${userId}`);
-      if (!res.ok) throw new Error("Failed to fetch products");
-      const data = await res.json();
-      setProducts(data.products || []);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`/api/seller/products?user_id=${userId}`);
+        if (!res.ok) throw new Error("Failed to fetch products");
+        const data = await res.json();
+        setProducts(data.products || []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchProducts();
-}, [userId]);
-
+    fetchProducts();
+  }, [userId]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
@@ -85,12 +85,19 @@ const ProductList = () => {
                 />
                 <Card.Body>
                   <Card.Title className="fw-semibold mb-2">{product.name}</Card.Title>
+
                   <div className="mb-1 text-muted">
-                    TSh{Number(product.price).toFixed(2)}
+                    TSh {Number(product.price).toFixed(2)}
                   </div>
+
                   {product.stock !== undefined && (
-                    <div className="mb-2 small">Stock: {product.stock}</div>
+                    <div className="mb-1 small">Stock: {product.stock}</div>
                   )}
+
+                  {product.viewed !== undefined && (
+                    <div className="mb-2 small text-muted">Views: {product.viewed}</div>
+                  )}
+
                   <Badge
                     bg={product.status.toLowerCase() === 'active' ? 'success' : 'secondary'}
                     className="mb-3"

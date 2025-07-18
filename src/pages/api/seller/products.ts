@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Query ads with their first image
     const [rows] = await db.execute(
-      `SELECT a.id, a.name, a.price, a.status, 
+      `SELECT a.id, a.name, a.price, a.status,a.viewed,
               (SELECT path FROM ad_images WHERE ad_id = a.id LIMIT 1) AS image_url
        FROM ads a
        WHERE a.user_id = ?`,

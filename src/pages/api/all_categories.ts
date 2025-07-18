@@ -17,19 +17,15 @@ export default async function handler(
   try {
     const [rows] = await db.query<CategoryRow[]>(`
       SELECT 
-        c.id AS category_id,
-        c.name AS category_name,
-        c.icon AS category_icon,
-        s.id AS subcategory_id,
-        s.name AS subcategory_name
-      FROM categories c
-      JOIN sub_categories s ON s.category_id = c.id
-      WHERE s.id NOT IN (
-        SELECT DISTINCT subcategory_id
-        FROM ads
-        WHERE status = 'active'
-      )
-      ORDER BY c.id, s.id
+    c.id AS category_id,
+    c.name AS category_name,
+    c.icon AS category_icon,
+    s.id AS subcategory_id,
+    s.name AS subcategory_name
+    FROM categories c
+    JOIN sub_categories s ON s.category_id = c.id
+    ORDER BY c.id, s.id;
+
     `);
 
     // Group categories and their subcategories
