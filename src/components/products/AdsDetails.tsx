@@ -99,7 +99,7 @@ const AdsDetails: React.FC<AdsDetailsProps> = ({ product }) => {
               fontSize: '1.1rem',
             }}
           >
-            Tsh {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            Tsh {product.price.toLocaleString(undefined, { minimumFractionDigits: 0 })}
           </div>
           <div
             className="mt-auto d-flex justify-content-between align-items-center text-muted pt-2"
