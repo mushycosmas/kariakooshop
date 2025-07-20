@@ -13,7 +13,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const sizeNum = parseInt(pageSize as string, 10);
   const offset = (pageNum - 1) * sizeNum;
 
-  // ✅ Validate pagination params
   if (isNaN(pageNum) || isNaN(sizeNum) || pageNum < 1 || sizeNum < 1) {
     return res.status(400).json({ message: "Invalid pagination parameters." });
   }
@@ -22,13 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let whereClauses: string[] = [];
     let params: any[] = [];
 
-    // 🔍 Filter: search query
     if (search) {
       whereClauses.push("a.name LIKE ?");
       params.push(`%${search}%`);
     }
 
-    // 🔍 Filter: subcategory
     if (subcategory_id && subcategory_id !== "All" && subcategory_id !== "") {
       whereClauses.push("a.subcategory_id = ?");
       params.push(subcategory_id);
@@ -37,7 +34,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const whereSQL =
       whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-    // ✅ Main product query with JOINs
     const adQuery = `
       SELECT 
         a.*, 
@@ -59,35 +55,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       LIMIT ? OFFSET ?
     `;
 
-    // Push pagination values
     params.push(sizeNum, offset);
 
     const [ads] = await db.query(adQuery, params);
     const adList = ads as any[];
 
-    // ✅ Empty results: early return
     if (adList.length === 0) {
-      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=30");
+      res.setHeader("Cache-Control", "no-store"); // disable stale
       return res.status(200).json({ products: [], total: 0 });
     }
 
-    // ✅ Extract ad IDs
     const adIds = adList.map((ad) => ad.id);
-
-    // ✅ Query images for ads (safe use of IN)
     const [images] = await db.query(
       `SELECT * FROM ad_images WHERE ad_id IN (${adIds.map(() => "?").join(",")})`,
       adIds
     );
 
-    // 🧠 Group images by ad_id
     const imagesByAd: { [key: number]: any[] } = {};
     (images as any[]).forEach((img) => {
       if (!imagesByAd[img.ad_id]) imagesByAd[img.ad_id] = [];
       imagesByAd[img.ad_id].push(img);
     });
 
-    // ✅ Combine ad data with images and related info
     const adsWithImages = adList.map((ad) => ({
       id: ad.id,
       name: ad.name,
@@ -115,7 +104,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       postedTime: ad.created_at,
     }));
 
-    // ✅ Total count for pagination (excluding LIMIT/OFFSET params)
     const countQuery = `
       SELECT COUNT(*) as total
       FROM ads a
@@ -128,8 +116,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [countRows] = await db.query(countQuery, params.slice(0, params.length - 2));
     const total = (countRows as any)[0]?.total || 0;
 
-    // ✅ Response
-    res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=30");
+    if (pageNum === 1) {
+      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=30");
+    } else {
+      res.setHeader("Cache-Control", "no-store");
+    }
+
     return res.status(200).json({ products: adsWithImages, total });
   } catch (error) {
     console.error("API error:", error);
