@@ -16,6 +16,7 @@ export interface Product {
   price: number;
   slug: string;
   path?: string;
+  description?: string;
   location?: string;
   postedTime?: string;
   images?: ProductImage[];
@@ -93,7 +94,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               minimumFractionDigits: 0,
             })}
           </div>
-
+ {/* Description */}
+  {product.description && (
+    <div
+      className="text-muted mt-1"
+      style={{
+        fontSize: '0.85rem',
+        lineHeight: '1.3',
+      }}
+    >
+      {product.description.length > 50
+        ? product.description.slice(0, 50) + '...'
+        : product.description}
+    </div>
+  )}
           {/* Location */}
           <div
             className="mt-auto d-flex justify-content-between align-items-center text-muted "

@@ -64,7 +64,7 @@ const ProductList = () => {
           <p className="text-muted">Manage your product listings here.</p>
         </Col>
         <Col className="text-end">
-          <Link href="/seller/products/add" passHref>
+          <Link href="/seller/new-add" passHref>
             <Button variant="primary">+ Add New Product</Button>
           </Link>
         </Col>

@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { db } from "../../../lib/db";
 import { RowDataPacket } from "mysql2";
+import { db } from "../../../lib/db";
 
 interface GoogleProfile {
   id: string;
