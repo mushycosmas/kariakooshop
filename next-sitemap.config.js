@@ -1,5 +1,5 @@
 module.exports = {
-  siteUrl: 'https://kariakooplus.shop',
+  siteUrl: 'https://nono.co.tz',
   generateRobotsTxt: true,
   changefreq: 'daily',
   priority: 0.8,

@@ -24,11 +24,11 @@ const Footer: React.FC = () => {
           {/* About */}
           <Col md={3} lg={3} xl={3} className="mx-auto mt-3">
             <h5 className="text-uppercase mb-4 font-weight-bold text-warning">
-              Kariakoo Plus Online Shop
+              Nono Online Shop
             </h5>
             <p>
               Shop the best deals on electronics, accessories, computers, radios, and bags.
-              Fast delivery and secure shopping experience right from the heart of Kariakoo.
+              Fast delivery and secure shopping experience across Tanzania.
             </p>
           </Col>
 
@@ -38,7 +38,6 @@ const Footer: React.FC = () => {
             <p><Link href="/" className="text-light text-decoration-none">Home</Link></p>
             <p><Link href="/products" className="text-light text-decoration-none">Shop</Link></p>
             <p><Link href="/about" className="text-light text-decoration-none">About Us</Link></p>
-            {/* <p><Link href="/contact" className="text-light text-decoration-none">Contact</Link></p> */}
           </Col>
 
           {/* Contact Info */}
@@ -48,7 +47,7 @@ const Footer: React.FC = () => {
               <BsHouseDoorFill className="me-2" /> Dar es Salaam, Tanzania
             </p>
             <p className="d-flex align-items-center">
-              <BsEnvelopeFill className="me-2" /> support@kariakooplus.co.tz
+              <BsEnvelopeFill className="me-2" /> support@nono.co.tz
             </p>
             <p className="d-flex align-items-center">
               <BsPhoneFill className="me-2" /> +255 744 091 391
@@ -72,8 +71,8 @@ const Footer: React.FC = () => {
 
         <Row className="align-items-center">
           <Col md={12} className="text-center">
-            <p className="mb-0">&copy; {currentYear} KariakooPlus Online Shop. All rights reserved.</p>
-            <small>Related brands: <strong>kariakoomall</strong>, <strong>mykariakoo</strong></small>
+            <p className="mb-0">&copy; {currentYear} Nono Online Shop. All rights reserved.</p>
+            <small>Your trusted online marketplace in Tanzania</small>
           </Col>
         </Row>
       </Container>

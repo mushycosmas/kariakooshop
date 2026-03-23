@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, username }) => {
     >
       <Container fluid>
         <Link href="/" className="navbar-brand fw-bold text-white">
-          KariakooPlus
+          Nono Online Shop
         </Link>
 
         <Navbar.Toggle aria-controls="navbarNav" />

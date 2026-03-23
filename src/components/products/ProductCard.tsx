@@ -5,8 +5,6 @@ import { Card } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 import parse from "html-react-parser";
 
-
-
 export interface ProductImage {
   id: number;
   ad_id: number;
@@ -35,29 +33,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const firstImage = product.images?.[0]?.path;
 
-   const handleClick = async () => {
+  const handleClick = async () => {
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
     const categorySlug = product.category?.slug || 'category';
     const subcategorySlug = product.subcategory?.slug || 'subcategory';
     const productSlug = product.slug;
-    const MAX_LENGTH = 50;
-      try {
+    try {
       await fetch(`/api/ads/${productSlug}/view`, {
         method: 'POST',
       });
     } catch (error) {
       console.error('Failed to increment view count:', error);
     }
-    router.push(`/products/${categorySlug}/${subcategorySlug}/${productSlug}`);
     const url = `/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
-    window.location.href = url; // Forces full page reload
+    router.push(url);
+    window.location.href = url; // Forces full reload
   };
 
   return (
     <>
       <Card
-        className="h-100 shadow-sm border rounded-3"
-        style={{ cursor: 'pointer', overflow: 'hidden' }}
+        className="h-100 shadow-sm border rounded-4 product-card"
+        style={{ cursor: 'pointer', overflow: 'hidden', transition: 'transform 0.3s, box-shadow 0.3s' }}
         onClick={handleClick}
       >
         {firstImage ? (
@@ -77,7 +74,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <Card.Body className="d-flex flex-column p-3">
           {/* Product Name */}
           <Card.Title
-            className=" text-truncate"
+            className="text-truncate mb-2"
             title={product.name}
             style={{ fontWeight: 600, fontSize: '1rem', lineHeight: '1.3' }}
           >
@@ -86,7 +83,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           {/* Price */}
           <div
-            className=""
+            className="mb-2"
             style={{
               fontWeight: 700,
               color: '#198754',
@@ -98,44 +95,57 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               minimumFractionDigits: 0,
             })}
           </div>
- {/* Description */}
-      {product.description && (
-      <div
-      className="text-muted mt-1"
-      style={{
-      fontSize: '0.85rem',
-      lineHeight: '1.3',
-      }}
-      dangerouslySetInnerHTML={{
-      __html:
-        product.description.length > 50
-          ? product.description.slice(0, 50) + '...'
-          : product.description,
-      }}
-      />
-    )}
+
+          {/* Description */}
+          {product.description && (
+            <div
+              className="text-muted mb-3"
+              style={{
+                fontSize: '0.85rem',
+                lineHeight: '1.3',
+              }}
+              dangerouslySetInnerHTML={{
+                __html:
+                  product.description.length > 60
+                    ? product.description.slice(0, 60) + '...'
+                    : product.description,
+              }}
+            />
+          )}
+
           {/* Location */}
           <div
-            className="mt-auto d-flex justify-content-between align-items-center text-muted "
+            className="mt-auto d-flex justify-content-between align-items-center text-muted"
             style={{ fontSize: '0.85rem' }}
           >
             <span>
               <i className="bi bi-geo-alt-fill me-1"></i>
               {product.location || 'Dar es Salaam'}
             </span>
+            {product.postedTime && <small>{product.postedTime}</small>}
           </div>
         </Card.Body>
       </Card>
 
       <style jsx>{`
+        .product-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
         .product-img {
           width: 100%;
-          height: 250px;
+          height: 260px;
           object-fit: cover;
           object-position: center;
-          border-top-left-radius: 0.3rem;
-          border-top-right-radius: 0.3rem;
+          border-top-left-radius: 0.5rem;
+          border-top-right-radius: 0.5rem;
           user-select: none;
+          transition: transform 0.3s;
+        }
+
+        .product-card:hover .product-img {
+          transform: scale(1.05);
         }
 
         @media (max-width: 576px) {

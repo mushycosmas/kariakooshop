@@ -1,4 +1,3 @@
-// pages/home.tsx or your HomePage component
 "use client";
 
 import React, { useState } from "react";
@@ -6,7 +5,7 @@ import MainLayout from "../components/MainLayout";
 import HeroSection from "../components/partial/HeroSection";
 import ProductList from "../components/products/ProductList";
 import WhatsAppButton from "../components/Buttons/WhatsAppButton";
-import Head from "next/head";  // Import Next.js Head component
+import Head from "next/head";
 
 const HomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,22 +13,42 @@ const HomePage = () => {
   return (
     <MainLayout>
       <Head>
-        {/* SEO Meta Tags */}
-        <title>Home | Your E-Commerce Platform</title>
+        {/* 🔥 PRIMARY SEO */}
+        <title>
+          Nono Tanzania | Kariakoo Online Market - Buy & Sell Products
+        </title>
+
         <meta
           name="description"
-          content="Find amazing products for all your needs. Browse our catalog now!"
+          content="Nono is your online Kariakoo marketplace in Tanzania. Buy and sell electronics, fashion, accessories and more at the best prices."
         />
-        <meta property="og:title" content="Home | kariakooplus Platform" />
+
+        {/* 🔥 KEYWORDS BOOST */}
+        <meta
+          name="keywords"
+          content="nono, kariakoo online, kariakoo market, Tanzania ecommerce, buy online Tanzania, sell products Tanzania"
+        />
+
+        {/* 🔥 OPEN GRAPH */}
+        <meta
+          property="og:title"
+          content="Nono | Kariakoo Online Shopping Platform"
+        />
         <meta
           property="og:description"
-          content="Explore a wide range of products. Free delivery on selected items!"
+          content="Shop from Kariakoo online with NONO. Discover deals on electronics, fashion, and more in Tanzania."
         />
         <meta property="og:image" content="/images/hero-banner.jpg" />
-        <meta property="og:url" content="https://kariakooplus.shop" />
+        <meta property="og:url" content="https://nono.co.tz" />
+
+        {/* 🔥 BRAND TRANSITION SIGNAL */}
+        <meta
+          name="author"
+          content="Nono (Inspired by Kariakoo Market Tanzania)"
+        />
       </Head>
 
-      {/* Rest of the page content */}
+      {/* Page Content */}
       <HeroSection searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       <ProductList defaultCategory="all" searchQuery={searchQuery} />
       <WhatsAppButton />
