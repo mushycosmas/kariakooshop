@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Form, Button, Col, Row, Alert, Image } from 'react-bootstrap';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useSession } from "next-auth/react";
+import { useSession } from 'next-auth/react';
+
 const MenuBar = ({ editor }: { editor: any }) => {
   if (!editor) return null;
 
@@ -61,6 +62,8 @@ interface Category {
 }
 
 const SimpleAdsForm = () => {
+  const { data: session, status } = useSession();
+
   const [form, setForm] = useState({
     name: '',
     price: '',
@@ -68,6 +71,8 @@ const SimpleAdsForm = () => {
     category_id: '',
     subcategory_id: '',
     status: 'active',
+    user_id: '',
+    location: '', // ✅ added location
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -76,8 +81,6 @@ const SimpleAdsForm = () => {
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: session } = useSession();
-  const userId = session?.user?.id;
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -87,11 +90,16 @@ const SimpleAdsForm = () => {
     },
   });
 
-  // Fetch categories and subcategories on mount
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id) {
+      setForm((prev) => ({ ...prev, user_id: String(session.user.id) }));
+    }
+  }, [session, status]);
+
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const res = await fetch('/api/categories_sub');
+        const res = await fetch('/api/all_categories');
         if (!res.ok) throw new Error('Failed to fetch categories');
         const data: Category[] = await res.json();
         setCategories(data);
@@ -103,12 +111,11 @@ const SimpleAdsForm = () => {
     fetchCategories();
   }, []);
 
-  // Update subcategories when category changes
   useEffect(() => {
     if (form.category_id) {
       const category = categories.find((cat) => cat.id === form.category_id);
       setFilteredSubcategories(category ? category.subcategories : []);
-      setForm((prev) => ({ ...prev, subcategory_id: '' })); // reset subcategory
+      setForm((prev) => ({ ...prev, subcategory_id: '' }));
     } else {
       setFilteredSubcategories([]);
       setForm((prev) => ({ ...prev, subcategory_id: '' }));
@@ -153,20 +160,26 @@ const SimpleAdsForm = () => {
       !form.price ||
       !form.category_id ||
       !form.subcategory_id ||
-      images.length === 0
+      !form.location || // ✅ validate location
+      images.length === 0 ||
+      !form.user_id
     ) {
-      setMessage('Please fill all required fields and add at least one image.');
+      setMessage('Please fill all required fields, add at least one image, and ensure you are logged in.');
       return;
     }
 
     setIsSubmitting(true);
     setMessage('');
 
-    const data = new FormData();
-    Object.entries(form).forEach(([key, value]) => data.append(key, value));
-    images.forEach((file) => data.append('images[]', file));
-
     try {
+      const data = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          data.append(key, value);
+        }
+      });
+      images.forEach((file) => data.append('images[]', file));
+
       const res = await fetch('/api/ads', {
         method: 'POST',
         body: data,
@@ -182,6 +195,8 @@ const SimpleAdsForm = () => {
           category_id: '',
           subcategory_id: '',
           status: 'active',
+          user_id: session?.user?.id ? String(session.user.id) : '',
+          location: '', // ✅ reset location
         });
         setImages([]);
         setPreviewUrls([]);
@@ -228,7 +243,6 @@ const SimpleAdsForm = () => {
           </Form.Group>
         </Col>
 
-        {/* Category and Subcategory on the same row */}
         <Col md={3}>
           <Form.Group controlId="productCategory">
             <Form.Label>Main Category *</Form.Label>
@@ -273,6 +287,19 @@ const SimpleAdsForm = () => {
             </Form.Select>
           </Form.Group>
         </Col>
+
+        <Col md={6}>
+          <Form.Group controlId="adLocation">
+            <Form.Label>Ad Location *</Form.Label>
+            <Form.Control
+              type="text"
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              required
+            />
+          </Form.Group>
+        </Col>
       </Row>
 
       <Form.Group className="mb-3">
@@ -298,6 +325,7 @@ const SimpleAdsForm = () => {
           multiple
           accept="image/*"
           onChange={handleImageChange}
+          disabled={images.length >= 5}
         />
       </Form.Group>
 
@@ -316,6 +344,7 @@ const SimpleAdsForm = () => {
               variant="danger"
               onClick={() => removeImage(index)}
               className="position-absolute top-0 end-0 p-1"
+              aria-label={`Remove image ${index + 1}`}
             >
               &times;
             </Button>

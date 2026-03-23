@@ -15,8 +15,8 @@ import { signOut } from "next-auth/react";
 
 const navLinks = [
   { href: "/seller/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
-  { href: "/seller/product-list", label: "My Products", icon: <FaBoxOpen /> },
-  { href: "/seller/new-add", label: "Add Product", icon: <FaPlus /> },
+  { href: "/seller/product-list", label: "My Ads", icon: <FaBoxOpen /> },
+  { href: "/seller/new-add", label: "Add Ads", icon: <FaPlus /> },
   { href: "/seller/messages", label: "Messages", icon: <FaEnvelope /> },
   { href: "/seller/settings", label: "Settings", icon: <FaUserCog /> },
 ];

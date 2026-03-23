@@ -3,6 +3,9 @@
 import React from 'react';
 import { Card } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
+import parse from "html-react-parser";
+
+
 
 export interface ProductImage {
   id: number;
@@ -37,6 +40,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const categorySlug = product.category?.slug || 'category';
     const subcategorySlug = product.subcategory?.slug || 'subcategory';
     const productSlug = product.slug;
+    const MAX_LENGTH = 50;
       try {
       await fetch(`/api/ads/${productSlug}/view`, {
         method: 'POST',
@@ -95,19 +99,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             })}
           </div>
  {/* Description */}
-  {product.description && (
-    <div
+      {product.description && (
+      <div
       className="text-muted mt-1"
       style={{
-        fontSize: '0.85rem',
-        lineHeight: '1.3',
+      fontSize: '0.85rem',
+      lineHeight: '1.3',
       }}
-    >
-      {product.description.length > 50
-        ? product.description.slice(0, 50) + '...'
-        : product.description}
-    </div>
-  )}
+      dangerouslySetInnerHTML={{
+      __html:
+        product.description.length > 50
+          ? product.description.slice(0, 50) + '...'
+          : product.description,
+      }}
+      />
+    )}
           {/* Location */}
           <div
             className="mt-auto d-flex justify-content-between align-items-center text-muted "

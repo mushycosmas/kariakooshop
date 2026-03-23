@@ -7,16 +7,25 @@ import { useRouter } from "next/navigation";
 import { Card, Row, Col } from "react-bootstrap";
 import { FaBoxOpen, FaEye, FaEnvelope } from "react-icons/fa";
 
+type Stats = {
+  totalAds: number;
+  totalViews: number;
+  totalMessages: number;
+};
+
 const Page = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalAds: 0,
     totalViews: 0,
     totalMessages: 0,
   });
 
+  const [loading, setLoading] = useState(true);
+
+  // Redirect if not authenticated
   useEffect(() => {
     if (status === "loading") return;
 
@@ -25,18 +34,28 @@ const Page = () => {
     }
   }, [status, router]);
 
-  // TODO: Replace with real API call
+  // Fetch real stats from API
   useEffect(() => {
-    // Example: fetch stats from your API
-    // fetch("/api/seller/stats").then(res => res.json()).then(setStats);
+    const fetchStats = async () => {
+      if (!session?.user?.id) return;
+      
 
-    // Temporary demo data
-    setStats({
-      totalAds: 12,
-      totalViews: 345,
-      totalMessages: 18,
-    });
-  }, []);
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/seller/stats?sellerId=${session.user.id}`);
+        if (!res.ok) throw new Error("Failed to fetch stats");
+
+        const data: Stats = await res.json();
+        setStats(data);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [session?.user?.id]);
 
   return (
     <SellerDashboardLayout>
@@ -57,7 +76,7 @@ const Page = () => {
                 <FaBoxOpen size={30} className="text-primary" />
                 <div>
                   <h6 className="mb-0 text-muted">Ads Posted</h6>
-                  <h4 className="fw-bold">{stats.totalAds}</h4>
+                  <h4 className="fw-bold">{loading ? "..." : stats.totalAds}</h4>
                 </div>
               </Card.Body>
             </Card>
@@ -69,7 +88,7 @@ const Page = () => {
                 <FaEye size={30} className="text-success" />
                 <div>
                   <h6 className="mb-0 text-muted">Total Views</h6>
-                  <h4 className="fw-bold">{stats.totalViews}</h4>
+                  <h4 className="fw-bold">{loading ? "..." : stats.totalViews}</h4>
                 </div>
               </Card.Body>
             </Card>
@@ -81,7 +100,7 @@ const Page = () => {
                 <FaEnvelope size={30} className="text-warning" />
                 <div>
                   <h6 className="mb-0 text-muted">Messages</h6>
-                  <h4 className="fw-bold">{stats.totalMessages}</h4>
+                  <h4 className="fw-bold">{loading ? "..." : stats.totalMessages}</h4>
                 </div>
               </Card.Body>
             </Card>
