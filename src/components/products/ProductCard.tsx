@@ -3,7 +3,6 @@
 import React from 'react';
 import { Card } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
-import parse from "html-react-parser";
 
 export interface ProductImage {
   id: number;
@@ -38,6 +37,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const categorySlug = product.category?.slug || 'category';
     const subcategorySlug = product.subcategory?.slug || 'subcategory';
     const productSlug = product.slug;
+
     try {
       await fetch(`/api/ads/${productSlug}/view`, {
         method: 'POST',
@@ -45,9 +45,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     } catch (error) {
       console.error('Failed to increment view count:', error);
     }
+
     const url = `/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
     router.push(url);
     window.location.href = url; // Forces full reload
+  };
+
+  // Helper to format postedTime as "time ago"
+  const getTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const posted = new Date(dateString);
+    const diff = Math.floor((now.getTime() - posted.getTime()) / 1000); // in seconds
+
+    if (diff < 60) return `${diff} seconds ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    return `${Math.floor(diff / 86400)} days ago`;
   };
 
   return (
@@ -113,7 +126,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             />
           )}
 
-          {/* Location */}
+          {/* Location & Posted Time */}
           <div
             className="mt-auto d-flex justify-content-between align-items-center text-muted"
             style={{ fontSize: '0.85rem' }}
@@ -122,7 +135,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <i className="bi bi-geo-alt-fill me-1"></i>
               {product.location || 'Dar es Salaam'}
             </span>
-            {product.postedTime && <small>{product.postedTime}</small>}
+            {product.postedTime && <small>{getTimeAgo(product.postedTime)}</small>}
           </div>
         </Card.Body>
       </Card>
