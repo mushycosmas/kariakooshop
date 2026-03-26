@@ -184,9 +184,9 @@ const AdDetail = () => {
                 <small className="text-muted">Verified Seller</small>
                 <hr />
                 <p><i className="bi bi-telephone-fill me-2" />{seller.phone || 'N/A'}</p>
-                {seller.email && (
+                {/* {seller.email && (
                   <p><i className="bi bi-envelope-fill me-2" />{seller.email}</p>
-                )}
+                )} */}
 
                 <Button
                   variant="success"
