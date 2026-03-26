@@ -32,6 +32,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const firstImage = product.images?.[0]?.path;
 
+  const firstImageUrl = firstImage
+  ? `/api/uploads/${firstImage.split('/').pop()}`
+  : null;
+
   const handleClick = async () => {
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
     const categorySlug = product.category?.slug || 'category';
@@ -70,10 +74,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         style={{ cursor: 'pointer', overflow: 'hidden', transition: 'transform 0.3s, box-shadow 0.3s' }}
         onClick={handleClick}
       >
-        {firstImage ? (
+        {firstImageUrl ? (
           <Card.Img
             variant="top"
-            src={firstImage}
+            src={firstImageUrl}
             alt={product.name}
             className="product-img"
             draggable={false}
