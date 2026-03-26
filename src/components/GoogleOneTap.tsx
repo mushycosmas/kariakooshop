@@ -20,7 +20,7 @@ export default function GoogleOneTap() {
     if (session) {
       console.log('User is logged in:', session);
       // Optionally, you can redirect users who are already logged in
-      router.push('/seller/dashboard'); 
+     // router.push('/seller/dashboard'); 
     } else {
       console.log('User is not logged in');
     }
