@@ -93,6 +93,8 @@ const AdDetail = () => {
     fetchAllProducts();
   }, []);
 
+  console.log("We test",product);
+
   if (loadingProduct || loadingAllProducts) {
     return (
       <div className="text-center py-5">
@@ -111,20 +113,20 @@ const AdDetail = () => {
 
   const seller = product.user ?? {};
   const avatar = seller.avatar_url
-    ? `https://kariakooplus.shop${seller.avatar_url}`
+    ? `https://nono.co.tz${seller.avatar_url}`
     : '/default-avatar.png';
 
   const productImage = product.images?.[0]
-    ? `https://kariakooplus.shop${product.images[0]}`
+    ? `https://nono.co.tz${product.images[0]}`
     : '/default-image.jpg';
 
-  const canonicalUrl = `https://kariakooplus.shop/products/${category_slug}/${subcategory_slug}/${product_slug}`;
+  const canonicalUrl = `https://nono.co.tz/products/${category_slug}/${subcategory_slug}/${product_slug}`;
 
   return (
     <>
       <Head>
-        <title>{product.name} | KariakooPlus</title>
-        <meta name="description" content={product.description?.slice(0, 150) || 'Product on KariakooPlus'} />
+        <title>{product.name} | nono sell and buy</title>
+        <meta name="description" content={product.description?.slice(0, 150) || 'Product on nono'} />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={canonicalUrl} />
 
@@ -134,7 +136,7 @@ const AdDetail = () => {
         <meta property="og:description" content={product.description} />
         <meta property="og:image" content={productImage} />
         <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:site_name" content="KariakooPlus" />
+        <meta property="og:site_name" content="nono sell and buy" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />

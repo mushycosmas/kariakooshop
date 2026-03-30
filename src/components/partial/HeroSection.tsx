@@ -6,6 +6,8 @@ import {
   InputGroup,
   Form,
   Button,
+  Row,
+  Col,
 } from 'react-bootstrap';
 
 interface HeroSectionProps {
@@ -27,64 +29,62 @@ const HeroSection: React.FC<HeroSectionProps> = ({ searchQuery, setSearchQuery }
       <div className="py-5 px-3">
         <Container fluid>
 
-          {/* 🔥 BRAND FOCUSED */}
-          <h1
-            className="text-white fw-bold mb-2"
-            style={{ letterSpacing: '1px' }}
-          >
-            Nono Online Shop
+          {/* 🔥 BRAND */}
+          <h1 className="text-white fw-bold mb-2">
+            NONO Marketplace
           </h1>
 
-          {/* 🔥 CLEAR VALUE */}
-          <p
-            className="text-warning fs-5 fw-semibold mb-4"
-            style={{ opacity: 0.95 }}
-          >
-            Buy & Sell Products in Tanzania — Fast, Easy, and Reliable
+          {/* 🔥 CORE MESSAGE */}
+          <p className="text-warning fs-5 fw-semibold mb-3">
+            Buy Retail or Order in Bulk — Trusted Electronics Supplier in Tanzania
+          </p>
+
+          {/* 🔥 SUB MESSAGE */}
+          <p className="text-light mb-4" style={{ opacity: 0.9 }}>
+            Shop single items or buy in wholesale (jumla) and grow your business with NONO.
           </p>
 
           {/* 🔍 SEARCH */}
-          <div
-            className="position-relative mx-auto"
-            style={{ maxWidth: '600px' }}
-          >
-            <InputGroup
-              className="shadow rounded-pill overflow-hidden"
-              style={{
-                background: '#fff',
-                transition: 'all 0.3s ease',
-              }}
-            >
+          <div className="mx-auto mb-4" style={{ maxWidth: '600px' }}>
+            <InputGroup className="shadow rounded-pill overflow-hidden">
               <Form.Control
                 type="text"
-                placeholder="Search phones, laptops, fashion, accessories..."
+                placeholder="Search chargers, earbuds, power banks, wholesale deals..."
                 className="border-0 px-4 py-2"
-                style={{
-                  boxShadow: 'none',
-                }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <Button
-                variant="dark"
-                className="px-4"
-                style={{
-                  borderRadius: '0',
-                }}
-                disabled
-              >
+              <Button variant="dark" className="px-4">
                 <i className="bi bi-search" />
               </Button>
             </InputGroup>
           </div>
 
-          {/* 🔥 BRAND MESSAGE */}
+          {/* 🔥 CTA BUTTONS (IMPORTANT) */}
+          {/* <Row className="justify-content-center g-2">
+            <Col xs="auto">
+              <Button
+                variant="warning"
+                className="fw-semibold px-4"
+              >
+                🛒 Shop Retail
+              </Button>
+            </Col>
+
+            <Col xs="auto">
+              <Button
+                variant="outline-light"
+                className="fw-semibold px-4"
+              >
+                📦 Buy Wholesale
+              </Button>
+            </Col>
+          </Row> */}
+
+          {/* 🔥 TRUST MESSAGE */}
           <div className="mt-3">
-            <small
-              className="text-light"
-              style={{ opacity: 0.85 }}
-            >
-              Nono is your trusted online marketplace for everyday shopping.
+            <small className="text-light" style={{ opacity: 0.85 }}>
+              ✔ Fast Delivery • ✔ Bulk Discounts • ✔ Trusted by Resellers
             </small>
           </div>
 

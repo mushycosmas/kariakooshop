@@ -7,21 +7,30 @@ interface Image extends RowDataPacket {
   ad_id: number;
 }
 
+interface WholesaleTier extends RowDataPacket {
+  id: number;
+  ad_id: number;
+  min_qty: number;
+  max_qty: number;
+  price: number;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   const { slug } = req.query;
-  console.log("Kelvin Cosmas",slug);
 
   if (!slug || typeof slug !== 'string') {
     return res.status(400).json({ message: 'Invalid slug' });
   }
 
   try {
-    // Fetch the ad and join with category, subcategory, and user
-    const [ads] = await db.query(
+    const connection = await db.getConnection();
+
+    // 🔥 MAIN PRODUCT
+    const [ads] = await connection.query(
       `
       SELECT 
         a.*, 
@@ -45,34 +54,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     if ((ads as RowDataPacket[]).length === 0) {
+      connection.release();
       return res.status(404).json({ message: 'Ad not found' });
     }
 
     const ad = (ads as any[])[0];
 
-    // Fetch related images
-    const [images] = await db.query<Image[]>(
+    // 🔥 IMAGES
+    const [images] = await connection.query<Image[]>(
       `SELECT * FROM ad_images WHERE ad_id = ?`,
       [ad.id]
     );
 
+    // 🔥 WHOLESALE TIERS
+    const [tiers] = await connection.query<WholesaleTier[]>(
+      `SELECT * FROM ad_wholesale_tiers WHERE ad_id = ? ORDER BY min_qty ASC`,
+      [ad.id]
+    );
+
+    connection.release();
+
+    // 🔥 RESPONSE
     const result = {
       id: ad.id,
-      name: ad.name,
-      price: ad.price,
-      description: ad.product_description,
-      created_at: ad.created_at,
-      status: ad.status,
       slug: ad.slug,
+
+      // BASIC
+      name: ad.name,
+      description: ad.product_description,
+      location: ad.location,
+      status: ad.status,
+
+      // PRICING
+      price: ad.price,
+      retail_price: ad.retail_price || null,
+      min_order_qty: ad.min_order_qty || null,
+
+      // WHOLESALE
+      wholesale_tiers: tiers || [],
+
+      // META
+      viewed: ad.viewed || 0,
+      created_at: ad.created_at,
+
+      // IMAGES
       images: images || [],
+
+      // CATEGORY
       category: {
         name: ad.category_name,
         slug: ad.category_slug,
       },
+
       subcategory: {
         name: ad.subcategory_name,
         slug: ad.subcategory_slug,
       },
+
+      // USER
       user: {
         id: ad.user_id,
         name: ad.user_name,
@@ -80,7 +119,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         phone: ad.user_phone,
         avatar_url: ad.avatar_url,
       },
-      postedTime: ad.created_at,
     };
 
     return res.status(200).json(result);

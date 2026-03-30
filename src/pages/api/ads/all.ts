@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const whereSQL =
       whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
+    // 🔥 MAIN ADS
     const adQuery = `
       SELECT 
         a.*, 
@@ -44,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         u.id AS user_id,
         u.name AS user_name,
         u.email AS user_email,
-        u.avatar_url AS avatar_url,
+        u.avatar_url,
         u.phone AS user_phone
       FROM ads a
       JOIN sub_categories s ON s.id = a.subcategory_id
@@ -61,11 +62,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const adList = ads as any[];
 
     if (adList.length === 0) {
-      res.setHeader("Cache-Control", "no-store"); // disable stale
       return res.status(200).json({ products: [], total: 0 });
     }
 
     const adIds = adList.map((ad) => ad.id);
+
+    // 🔥 IMAGES
     const [images] = await db.query(
       `SELECT * FROM ad_images WHERE ad_id IN (${adIds.map(() => "?").join(",")})`,
       adIds
@@ -77,23 +79,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       imagesByAd[img.ad_id].push(img);
     });
 
-    const adsWithImages = adList.map((ad) => ({
+    // 🔥 WHOLESALE TIERS
+    const [tiers] = await db.query(
+      `SELECT * FROM ad_wholesale_tiers WHERE ad_id IN (${adIds.map(() => "?").join(",")}) ORDER BY min_qty ASC`,
+      adIds
+    );
+
+    const tiersByAd: { [key: number]: any[] } = {};
+    (tiers as any[]).forEach((tier) => {
+      if (!tiersByAd[tier.ad_id]) tiersByAd[tier.ad_id] = [];
+      tiersByAd[tier.ad_id].push(tier);
+    });
+
+    // 🔥 FINAL FORMAT
+    const adsWithDetails = adList.map((ad) => ({
       id: ad.id,
-      name: ad.name,
-      price: ad.price,
-      description: ad.product_description,
-      created_at: ad.created_at,
-      status: ad.status,
       slug: ad.slug,
+
+      // BASIC
+      name: ad.name,
+      description: ad.product_description,
+      location: ad.location,
+      status: ad.status,
+
+      // PRICING
+      price: ad.price,
+      retail_price: ad.retail_price || null,
+      min_order_qty: ad.min_order_qty || null,
+
+      // WHOLESALE
+      wholesale_tiers: tiersByAd[ad.id] || [],
+
+      // META
+      viewed: ad.viewed || 0,
+      created_at: ad.created_at,
+
+      // IMAGES
       images: imagesByAd[ad.id] || [],
+
+      // CATEGORY
       category: {
         name: ad.category_name,
         slug: ad.category_slug,
       },
+
       subcategory: {
         name: ad.subcategory_name,
         slug: ad.subcategory_slug,
       },
+
+      // USER
       user: {
         id: ad.user_id,
         name: ad.user_name,
@@ -101,9 +136,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         phone: ad.user_phone,
         avatar_url: ad.avatar_url,
       },
-      postedTime: ad.created_at,
     }));
 
+    // 🔥 COUNT
     const countQuery = `
       SELECT COUNT(*) as total
       FROM ads a
@@ -113,16 +148,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ${whereSQL}
     `;
 
-    const [countRows] = await db.query(countQuery, params.slice(0, params.length - 2));
+    const [countRows] = await db.query(
+      countQuery,
+      params.slice(0, params.length - 2)
+    );
+
     const total = (countRows as any)[0]?.total || 0;
 
-    if (pageNum === 1) {
-      res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=30");
-    } else {
-      res.setHeader("Cache-Control", "no-store");
-    }
+    return res.status(200).json({
+      products: adsWithDetails,
+      total,
+    });
 
-    return res.status(200).json({ products: adsWithImages, total });
   } catch (error) {
     console.error("API error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
