@@ -19,7 +19,7 @@ export interface Product {
     ad_id?: number;
     min_qty: number;
     max_qty: number;
-    whole_seller_price: number;
+    whole_seller_price: string;
   }[];
 
   // 🔥 META
