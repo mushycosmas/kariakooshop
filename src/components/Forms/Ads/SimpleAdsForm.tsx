@@ -148,26 +148,37 @@ const SimpleAdsForm = () => {
   };
 
   // 🔥 Images
-  const handleImageChange = async (e: any) => {
-    const files = Array.from(e.target.files || []);
-    const newFiles: File[] = [];
+ const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files) return;
 
-    for (const file of files) {
+  // convert FileList to File[]
+  const fileArray: File[] = Array.from(files);
+
+  const newFiles: File[] = [];
+
+  for (const file of fileArray) {
+    try {
       const compressed = await imageCompression(file, {
         maxSizeMB: 1,
         maxWidthOrHeight: 1024,
       });
       newFiles.push(compressed);
+    } catch (error) {
+      console.error('Image compression error:', error);
+      newFiles.push(file); // fallback
     }
+  }
 
-    setImages((prev) => [...prev, ...newFiles]);
-    setPreviewUrls((prev) => [
-      ...prev,
-      ...newFiles.map((f) => URL.createObjectURL(f)),
-    ]);
+  setImages((prev) => [...prev, ...newFiles]);
+  setPreviewUrls((prev) => [
+    ...prev,
+    ...newFiles.map((f) => URL.createObjectURL(f)),
+  ]);
 
-    e.target.value = '';
-  };
+  // reset input
+  e.target.value = '';
+};
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
