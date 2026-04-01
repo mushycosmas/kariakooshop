@@ -15,7 +15,7 @@ const HomePage = () => {
       <Head>
         {/* 🔥 PRIMARY SEO */}
         <title>
-          Nono Tanzania | Kariakoo Online Market - Buy & Sell Products
+          Nono Tanzania | Nono Online Market - Buy & Sell Products
         </title>
 
         <meta
