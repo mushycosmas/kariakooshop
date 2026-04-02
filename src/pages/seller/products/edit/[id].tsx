@@ -6,6 +6,7 @@ import { Form, Button, Col, Row, Alert, Image, Spinner, Card } from 'react-boots
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import SellerDashboardLayout from '@/components/SellerDashboardLayout';
+import imageCompression from 'browser-image-compression';
 
 interface Category {
   id: string;
@@ -152,19 +153,36 @@ const EditProductForm: React.FC = () => {
   }));
 
   // Image handlers
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const newFiles = Array.from(files);
 
-    // Generate previews
-    const urls = newFiles.map(file => URL.createObjectURL(file));
 
-    setNewImages(prev => [...prev, ...newFiles]);
-    setPreviewUrls(prev => [...prev, ...urls]);
+const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files) return;
 
-    e.target.value = '';
-  };
+  const compressedFiles: File[] = [];
+  const previewList: string[] = [];
+
+  for (const file of Array.from(files)) {
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,          // 🔥 VERY IMPORTANT
+        maxWidthOrHeight: 1024,
+      });
+
+      compressedFiles.push(compressed);
+      previewList.push(URL.createObjectURL(compressed));
+    } catch (err) {
+      console.error(err);
+      compressedFiles.push(file);
+      previewList.push(URL.createObjectURL(file));
+    }
+  }
+
+  setNewImages(prev => [...prev, ...compressedFiles]);
+  setPreviewUrls(prev => [...prev, ...previewList]);
+
+  e.target.value = '';
+};
 
   // Cleanup object URLs on unmount
   useEffect(() => {
