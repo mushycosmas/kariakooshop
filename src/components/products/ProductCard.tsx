@@ -12,8 +12,8 @@ export interface ProductImage {
 
 export interface WholesaleTier {
   min_qty: number;
-  max_qty: number;
-  whole_seller_price: number;
+  max_qty: number; 
+whole_seller_price: number| string;
 }
 
 export interface Product {
