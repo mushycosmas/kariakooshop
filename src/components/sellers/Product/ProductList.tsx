@@ -106,9 +106,9 @@ const ProductList = () => {
                   </Badge>
 
                   <div className="d-flex justify-content-between">
-                    <Link href={`/api/seller/products/edit/${product.id}`} passHref>
-                      <Button size="sm" variant="outline-primary">Edit</Button>
-                    </Link>
+                  <Link href={`/seller/products/edit/${product.id}`} passHref>
+                 <Button size="sm" variant="outline-primary">Edit</Button>
+                 </Link>
                     <Button
                       size="sm"
                       variant="outline-danger"
