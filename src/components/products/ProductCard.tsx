@@ -10,6 +10,12 @@ export interface ProductImage {
   path: string;
 }
 
+export interface WholesaleTier {
+  min_qty: number;
+  max_qty: number;
+  whole_seller_price: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -20,6 +26,7 @@ export interface Product {
   location?: string;
   postedTime?: string;
   images?: ProductImage[];
+  wholesale_tiers?: WholesaleTier[]; // ✅ IMPORTANT
   category?: { slug: string };
   subcategory?: { slug: string };
 }
@@ -32,8 +39,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const firstImage = product.images?.[0]?.path;
 
+  // ✅ Get lowest price (wholesale or normal)
+  const getDisplayPrice = () => {
+    if (product.wholesale_tiers && product.wholesale_tiers.length > 0) {
+      const validPrices = product.wholesale_tiers
+        .map((t) => Number(t.whole_seller_price))
+        .filter((p) => p > 0);
+
+      if (validPrices.length > 0) {
+        return Math.min(...validPrices);
+      }
+    }
+    return product.price || 0;
+  };
+
+  const displayPrice = getDisplayPrice();
+  const isWholesale = product.wholesale_tiers && product.wholesale_tiers.length > 0;
+
   const handleClick = async () => {
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
+
     const categorySlug = product.category?.slug || 'category';
     const subcategorySlug = product.subcategory?.slug || 'subcategory';
     const productSlug = product.slug;
@@ -48,28 +73,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
     const url = `/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
     router.push(url);
-    window.location.href = url; // Forces full reload
+    window.location.href = url;
   };
 
-  // Helper to format postedTime as "time ago"
+  // ✅ Time ago helper
   const getTimeAgo = (dateString: string) => {
     const now = new Date();
     const posted = new Date(dateString);
-    const diff = Math.floor((now.getTime() - posted.getTime()) / 1000); // in seconds
+    const diff = Math.floor((now.getTime() - posted.getTime()) / 1000);
 
-    if (diff < 60) return `${diff} seconds ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-    return `${Math.floor(diff / 86400)} days ago`;
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
   };
 
   return (
     <>
       <Card
         className="h-100 shadow-sm border rounded-4 product-card"
-        style={{ cursor: 'pointer', overflow: 'hidden', transition: 'transform 0.3s, box-shadow 0.3s' }}
+        style={{
+          cursor: 'pointer',
+          overflow: 'hidden',
+          transition: 'transform 0.3s, box-shadow 0.3s',
+        }}
         onClick={handleClick}
       >
+        {/* IMAGE */}
         {firstImage ? (
           <Card.Img
             variant="top"
@@ -85,75 +115,70 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
 
         <Card.Body className="d-flex flex-column p-3">
-          {/* Product Name */}
+          {/* NAME */}
           <Card.Title
             className="text-truncate mb-2"
             title={product.name}
-            style={{ fontWeight: 600, fontSize: '1rem', lineHeight: '1.3' }}
+            style={{ fontWeight: 600, fontSize: '1rem' }}
           >
             {product.name}
           </Card.Title>
 
-          {/* Price */}
-          <div
-            className="mb-2"
-            style={{
-              fontWeight: 700,
-              color: '#198754',
-              fontSize: '1.1rem',
-            }}
-          >
-            Tsh{' '}
-            {product.price.toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-            })}
-          </div>
+           {/* PRICE */}
+<div
+  className="mb-2 d-flex align-items-center flex-wrap"
+  style={{
+    fontWeight: 700,
+    color: '#198754',
+    fontSize: '1.1rem',
+  }}
+>
+  Tsh {displayPrice.toLocaleString()}
 
-          {/* Description */}
-          {product.description && (
-            <div
-              className="text-muted mb-3"
-              style={{
-                fontSize: '0.85rem',
-                lineHeight: '1.3',
-              }}
-              dangerouslySetInnerHTML={{
-                __html:
-                  product.description.length > 60
-                    ? product.description.slice(0, 60) + '...'
-                    : product.description,
-              }}
-            />
-          )}
+  {/* 🔥 Wholesale badge */}
+  {isWholesale && (
+    <span
+      style={{
+        fontSize: '0.7rem',
+        background: '#ffc107',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        marginLeft: '6px',
+        fontWeight: 600,
+      }}
+    >
+      Wholesale
+    </span>
+  )}
+</div>
 
-          {/* Location & Posted Time */}
+          {/* FOOTER */}
           <div
             className="mt-auto d-flex justify-content-between align-items-center text-muted"
             style={{ fontSize: '0.85rem' }}
           >
             <span>
-              <i className="bi bi-geo-alt-fill me-1"></i>
-              {product.location || 'Dar es Salaam'}
+              📍 {product.location || 'Dar es Salaam'}
             </span>
-            {product.postedTime && <small>{getTimeAgo(product.postedTime)}</small>}
+
+            {product.postedTime && (
+              <small>{getTimeAgo(product.postedTime)}</small>
+            )}
           </div>
         </Card.Body>
       </Card>
 
+      {/* STYLES */}
       <style jsx>{`
         .product-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
 
         .product-img {
           width: 100%;
           height: 260px;
           object-fit: cover;
-          object-position: center;
-          border-top-left-radius: 0.5rem;
-          border-top-right-radius: 0.5rem;
-          user-select: none;
           transition: transform 0.3s;
         }
 
@@ -174,7 +199,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           background-color: #e9ecef;
           color: #6c757d;
           font-weight: 500;
-          font-size: 1rem;
         }
       `}</style>
     </>
