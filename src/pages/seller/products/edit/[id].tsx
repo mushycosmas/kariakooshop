@@ -24,7 +24,8 @@ interface ProductForm {
   wholesale_tiers: { min_qty: number; max_qty: number; whole_seller_price: string }[];
 }
 
-const MenuBar = ({ editor }: { editor: ReturnType<typeof useEditor> | null }) => {
+// TipTap toolbar
+const MenuBar: React.FC<{ editor: ReturnType<typeof useEditor> | null }> = ({ editor }) => {
   if (!editor) return null;
 
   const toggleBold = () => editor.chain().focus().toggleBold().run();
@@ -82,19 +83,13 @@ const EditProductForm: React.FC = () => {
       .catch(() => setMessage('Failed to load categories'));
   }, []);
 
-  // Filter subcategories
-  useEffect(() => {
-    const selectedCategory = categories.find(c => c.id === form.category_id);
-    setFilteredSubcategories(selectedCategory ? selectedCategory.subcategories : []);
-  }, [form.category_id, categories]);
-
-  // Fetch product data
+  // Fetch product
   useEffect(() => {
     if (!id) return;
 
     const fetchProduct = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
         const res = await fetch(`/api/seller/products/${id}`);
         if (!res.ok) throw new Error('Failed to fetch product');
         const data = await res.json();
@@ -112,8 +107,8 @@ const EditProductForm: React.FC = () => {
 
         setExistingImages(data.images || []);
         editor?.commands.setContent(data.product.product_description || '');
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
         setMessage('Error loading product data');
       } finally {
         setLoading(false);
@@ -123,14 +118,37 @@ const EditProductForm: React.FC = () => {
     fetchProduct();
   }, [id, editor]);
 
-  // Handle form changes
+  // Update subcategories when category changes and preselect
+  useEffect(() => {
+    if (!form.category_id) {
+      setFilteredSubcategories([]);
+      return;
+    }
+    const selectedCategory = categories.find(c => c.id === form.category_id);
+    if (selectedCategory) {
+      setFilteredSubcategories(selectedCategory.subcategories);
+      // Preselect subcategory if not in filtered
+      if (!selectedCategory.subcategories.some(s => s.id === form.subcategory_id)) {
+        setForm(prev => ({
+          ...prev,
+          subcategory_id: selectedCategory.subcategories[0]?.id || '',
+        }));
+      }
+    }
+  }, [form.category_id, categories]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
   // Wholesale tiers
-  const addTier = () => setForm(prev => ({ ...prev, wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 1, max_qty: 5, whole_seller_price: '' }] }));
+  const addTier = () =>
+    setForm(prev => ({
+      ...prev,
+      wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 1, max_qty: 5, whole_seller_price: '' }],
+    }));
+
   const updateTier = (index: number, field: 'min_qty' | 'max_qty' | 'whole_seller_price', value: string) => {
     setForm(prev => {
       const updated = [...prev.wholesale_tiers];
@@ -138,27 +156,35 @@ const EditProductForm: React.FC = () => {
       return { ...prev, wholesale_tiers: updated };
     });
   };
-  const removeTier = (index: number) => setForm(prev => ({ ...prev, wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index) }));
 
-  // Image handling
+  const removeTier = (index: number) =>
+    setForm(prev => ({ ...prev, wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index) }));
+
+  // Images
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-
-    const files = Array.from(e.target.files);
-    setNewImages(prev => [...prev, ...files]);
-    const urls = files.map(f => URL.createObjectURL(f));
-    setPreviewUrls(prev => [...prev, ...urls]);
+    const files = e.target.files;
+    if (!files) return;
+    const newFiles = Array.from(files);
+    setNewImages(prev => [...prev, ...newFiles]);
+    setPreviewUrls(prev => [...prev, ...Array.from(files).map(f => URL.createObjectURL(f))]);
     e.target.value = '';
   };
 
   const removeExistingImage = (url: string) => setExistingImages(prev => prev.filter(u => u !== url));
+
   const removeNewImage = (index: number) => {
-    setNewImages(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    const updatedNewImages = [...newImages];
+    const updatedPreviews = [...previewUrls];
+    updatedNewImages.splice(index, 1);
+    updatedPreviews.splice(index, 1);
+    setNewImages(updatedNewImages);
+    setPreviewUrls(updatedPreviews);
   };
 
+  // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!form.name || !form.price || !form.category_id || !form.subcategory_id || !form.location) {
       setMessage('Please fill all required fields.');
       return;
@@ -166,6 +192,7 @@ const EditProductForm: React.FC = () => {
 
     setSubmitting(true);
     setMessage('');
+
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => {
@@ -184,9 +211,9 @@ const EditProductForm: React.FC = () => {
       } else {
         setMessage(result.message || 'Update failed.');
       }
-    } catch (err) {
-      console.error(err);
-      setMessage('Error updating product.');
+    } catch (error) {
+      console.error(error);
+      setMessage('An error occurred while updating the product.');
     } finally {
       setSubmitting(false);
     }
@@ -229,7 +256,9 @@ const EditProductForm: React.FC = () => {
               <Form.Label>Category *</Form.Label>
               <Form.Select name="category_id" value={form.category_id} onChange={handleChange} required>
                 <option value="">Select Category</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Col>
@@ -238,7 +267,9 @@ const EditProductForm: React.FC = () => {
               <Form.Label>Subcategory *</Form.Label>
               <Form.Select name="subcategory_id" value={form.subcategory_id} onChange={handleChange} required>
                 <option value="">Select Subcategory</option>
-                {filteredSubcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {filteredSubcategories.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Col>
@@ -277,7 +308,7 @@ const EditProductForm: React.FC = () => {
         {/* Existing Images */}
         <Form.Group className="mb-3">
           <Form.Label>Existing Images</Form.Label>
-          <div className="d-flex flex-wrap gap-2">
+          <div className="d-flex flex-wrap gap-2 mb-3">
             {existingImages.length === 0 && <div>No existing images</div>}
             {existingImages.map((url, idx) => (
               <div key={idx} className="position-relative" style={{ width: 100 }}>
@@ -294,7 +325,6 @@ const EditProductForm: React.FC = () => {
           <Form.Control type="file" multiple accept="image/*" onChange={handleImageChange} />
         </Form.Group>
 
-        {/* New Previews */}
         <div className="d-flex flex-wrap gap-2 mb-3">
           {previewUrls.map((url, idx) => (
             <div key={idx} className="position-relative" style={{ width: 100 }}>

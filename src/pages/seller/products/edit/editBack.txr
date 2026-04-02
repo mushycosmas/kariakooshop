@@ -2,40 +2,44 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Form, Button, Col, Row, Alert, Image, Spinner, InputGroup } from 'react-bootstrap';
+import { Form, Button, Col, Row, Alert, Image, Spinner, Card } from 'react-bootstrap';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import SellerDashboardLayout from '@/components/SellerDashboardLayout';
 
-type WholesaleTier = {
-  min_qty: number;
-  max_qty: number;
-  whole_seller_price: string;
-};
+interface Category {
+  id: string;
+  name: string;
+  subcategories: { id: string; name: string }[];
+}
 
-type ProductForm = {
+interface ProductForm {
   name: string;
   price: string;
   product_description: string;
   category_id: string;
   subcategory_id: string;
-  status: string;
   location: string;
-  wholesale_tiers: WholesaleTier[];
-};
-
-type Category = { id: number; name: string };
-type Subcategory = { id: number; name: string; category_id: number };
+  status: string;
+  wholesale_tiers: { min_qty: number; max_qty: number; whole_seller_price: string }[];
+}
 
 const MenuBar = ({ editor }: { editor: ReturnType<typeof useEditor> | null }) => {
   if (!editor) return null;
+
+  const toggleBold = () => editor.chain().focus().toggleBold().run();
+  const toggleItalic = () => editor.chain().focus().toggleItalic().run();
+  const toggleStrike = () => editor.chain().focus().toggleStrike().run();
+  const toggleBulletList = () => editor.chain().focus().toggleBulletList().run();
+  const toggleOrderedList = () => editor.chain().focus().toggleOrderedList().run();
+
   return (
     <div className="mb-2">
-      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleBold().run()} className="me-2"><b>B</b></Button>
-      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleItalic().run()} className="me-2"><i>I</i></Button>
-      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleStrike().run()} className="me-2">S</Button>
-      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleBulletList().run()} className="me-2">• List</Button>
-      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1. List</Button>
+      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={toggleBold} className="me-2"><b>B</b></Button>
+      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={toggleItalic} className="me-2"><i>I</i></Button>
+      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={toggleStrike} className="me-2">S</Button>
+      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={toggleBulletList} className="me-2">• List</Button>
+      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={toggleOrderedList}>1. List</Button>
     </div>
   );
 };
@@ -50,14 +54,13 @@ const EditProductForm: React.FC = () => {
     product_description: '',
     category_id: '',
     subcategory_id: '',
-    status: 'active',
     location: '',
-    wholesale_tiers: [],
+    status: 'active',
+    wholesale_tiers: [{ min_qty: 1, max_qty: 5, whole_seller_price: '' }],
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<{ id: string; name: string }[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -71,30 +74,27 @@ const EditProductForm: React.FC = () => {
     onUpdate: ({ editor }) => setForm(prev => ({ ...prev, product_description: editor.getHTML() })),
   });
 
-  // Fetch categories & subcategories
+  // Fetch categories
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const resCat = await fetch('/api/categories');
-        const catData = await resCat.json();
-        setCategories(catData);
-
-        const resSub = await fetch('/api/subcategories');
-        const subData = await resSub.json();
-        setSubcategories(subData);
-      } catch (err) {
-        console.error('Failed to fetch categories/subcategories', err);
-      }
-    };
-    fetchCategories();
+    fetch('/api/all_categories')
+      .then(res => res.json())
+      .then(data => setCategories(data))
+      .catch(() => setMessage('Failed to load categories'));
   }, []);
+
+  // Filter subcategories
+  useEffect(() => {
+    const selectedCategory = categories.find(c => c.id === form.category_id);
+    setFilteredSubcategories(selectedCategory ? selectedCategory.subcategories : []);
+  }, [form.category_id, categories]);
 
   // Fetch product data
   useEffect(() => {
     if (!id) return;
+
     const fetchProduct = async () => {
-      setLoading(true);
       try {
+        setLoading(true);
         const res = await fetch(`/api/seller/products/${id}`);
         if (!res.ok) throw new Error('Failed to fetch product');
         const data = await res.json();
@@ -105,109 +105,94 @@ const EditProductForm: React.FC = () => {
           product_description: data.product.product_description || '',
           category_id: data.product.category_id?.toString() || '',
           subcategory_id: data.product.subcategory_id?.toString() || '',
-          status: data.product.status || 'active',
           location: data.product.location || '',
-          wholesale_tiers: data.wholesale_tiers || [],
+          status: data.product.status || 'active',
+          wholesale_tiers: data.wholesale_tiers || [{ min_qty: 1, max_qty: 5, whole_seller_price: '' }],
         });
 
         setExistingImages(data.images || []);
-
-        if (editor) editor.commands.setContent(data.product.product_description || '');
-      } catch (error) {
-        console.error(error);
+        editor?.commands.setContent(data.product.product_description || '');
+      } catch (err) {
+        console.error(err);
         setMessage('Error loading product data');
       } finally {
         setLoading(false);
       }
     };
+
     fetchProduct();
   }, [id, editor]);
 
-  // Filter subcategories based on category
-  useEffect(() => {
-    if (form.category_id) {
-      setFilteredSubcategories(subcategories.filter(sub => sub.category_id.toString() === form.category_id));
-    } else {
-      setFilteredSubcategories([]);
-    }
-  }, [form.category_id, subcategories]);
-
+  // Handle form changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // Wholesale tiers
+  const addTier = () => setForm(prev => ({ ...prev, wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 1, max_qty: 5, whole_seller_price: '' }] }));
+  const updateTier = (index: number, field: 'min_qty' | 'max_qty' | 'whole_seller_price', value: string) => {
+    setForm(prev => {
+      const updated = [...prev.wholesale_tiers];
+      updated[index] = { ...updated[index], [field]: field === 'whole_seller_price' ? value : Number(value) };
+      return { ...prev, wholesale_tiers: updated };
+    });
+  };
+  const removeTier = (index: number) => setForm(prev => ({ ...prev, wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index) }));
+
+  // Image handling
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const filesArray = Array.from(files);
-      const updatedNewImages = [...newImages, ...filesArray];
-      setNewImages(updatedNewImages);
-      setPreviewUrls(updatedNewImages.map(file => URL.createObjectURL(file)));
-      e.target.value = '';
-    }
+    if (!e.target.files) return;
+
+    const files = Array.from(e.target.files);
+    setNewImages(prev => [...prev, ...files]);
+    const urls = files.map(f => URL.createObjectURL(f));
+    setPreviewUrls(prev => [...prev, ...urls]);
+    e.target.value = '';
   };
 
-  const removeExistingImage = (url: string) => setExistingImages(imgs => imgs.filter(i => i !== url));
-  const removeNewImage = (idx: number) => {
-    const filtered = newImages.filter((_, i) => i !== idx);
-    setNewImages(filtered);
-    setPreviewUrls(filtered.map(file => URL.createObjectURL(file)));
-  };
-
-  const handleWholesaleChange = (index: number, field: keyof WholesaleTier, value: string) => {
-    const updatedTiers = [...form.wholesale_tiers];
-    updatedTiers[index][field] = field === 'whole_seller_price' ? value : parseInt(value);
-    setForm(prev => ({ ...prev, wholesale_tiers: updatedTiers }));
-  };
-
-  const addWholesaleTier = () => {
-    setForm(prev => ({ ...prev, wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 0, max_qty: 0, whole_seller_price: '' }] }));
-  };
-
-  const removeWholesaleTier = (index: number) => {
-    const updated = form.wholesale_tiers.filter((_, i) => i !== index);
-    setForm(prev => ({ ...prev, wholesale_tiers: updated }));
+  const removeExistingImage = (url: string) => setExistingImages(prev => prev.filter(u => u !== url));
+  const removeNewImage = (index: number) => {
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.price || !form.subcategory_id) {
+    if (!form.name || !form.price || !form.category_id || !form.subcategory_id || !form.location) {
       setMessage('Please fill all required fields.');
       return;
     }
 
     setSubmitting(true);
     setMessage('');
-
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => {
-        if (key === 'wholesale_tiers') formData.append(key, JSON.stringify(value));
-        else formData.append(key, value);
+        if (key !== 'wholesale_tiers') formData.append(key, value as string);
       });
-
-      existingImages.forEach(url => formData.append('existingImages', url));
-      newImages.forEach(file => formData.append('newImages', file));
+      formData.append('wholesale_tiers', JSON.stringify(form.wholesale_tiers));
+      existingImages.forEach(url => formData.append('existingImages[]', url));
+      newImages.forEach(file => formData.append('newImages[]', file));
 
       const res = await fetch(`/api/seller/products/${id}`, { method: 'PUT', body: formData });
       const result = await res.json();
 
       if (res.ok) {
         setMessage(result.message || 'Product updated successfully!');
-        setTimeout(() => router.push('/seller/products'), 1500);
+        setTimeout(() => router.push('/seller/product-list'), 1500);
       } else {
         setMessage(result.message || 'Update failed.');
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setMessage('Error updating product.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <Spinner animation="border" role="status" />;
+  if (loading) return <Spinner animation="border" />;
 
   return (
     <SellerDashboardLayout>
@@ -221,18 +206,19 @@ const EditProductForm: React.FC = () => {
               <Form.Control type="text" name="name" value={form.name} onChange={handleChange} required />
             </Form.Group>
           </Col>
-
           <Col md={3}>
             <Form.Group>
-              <Form.Label>Price (TZS) *</Form.Label>
-              <Form.Control type="number" name="price" value={form.price} onChange={handleChange} required />
+              <Form.Label>Price *</Form.Label>
+              <Form.Control type="number" name="price" value={form.price} onChange={handleChange} required min="0" step="any" />
             </Form.Group>
           </Col>
-
           <Col md={3}>
             <Form.Group>
-              <Form.Label>Location *</Form.Label>
-              <Form.Control type="text" name="location" value={form.location} onChange={handleChange} required />
+              <Form.Label>Status *</Form.Label>
+              <Form.Select name="status" value={form.status} onChange={handleChange} required>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </Form.Select>
             </Form.Group>
           </Col>
         </Row>
@@ -243,84 +229,84 @@ const EditProductForm: React.FC = () => {
               <Form.Label>Category *</Form.Label>
               <Form.Select name="category_id" value={form.category_id} onChange={handleChange} required>
                 <option value="">Select Category</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </Form.Select>
             </Form.Group>
           </Col>
-
           <Col md={6}>
             <Form.Group>
               <Form.Label>Subcategory *</Form.Label>
               <Form.Select name="subcategory_id" value={form.subcategory_id} onChange={handleChange} required>
                 <option value="">Select Subcategory</option>
-                {filteredSubcategories.map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
+                {filteredSubcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </Form.Select>
             </Form.Group>
           </Col>
         </Row>
 
         <Form.Group className="mb-3">
+          <Form.Label>Location *</Form.Label>
+          <Form.Control type="text" name="location" value={form.location} onChange={handleChange} required />
+        </Form.Group>
+
+        {/* Wholesale Tiers */}
+        <Card className="mb-3">
+          <Card.Body>
+            <h5>Wholesale Tiers</h5>
+            {form.wholesale_tiers.map((tier, idx) => (
+              <Row key={idx} className="mb-2">
+                <Col md={3}><Form.Control type="number" value={tier.min_qty} onChange={e => updateTier(idx, 'min_qty', e.target.value)} /></Col>
+                <Col md={3}><Form.Control type="number" value={tier.max_qty} onChange={e => updateTier(idx, 'max_qty', e.target.value)} /></Col>
+                <Col md={3}><Form.Control type="number" value={tier.whole_seller_price} onChange={e => updateTier(idx, 'whole_seller_price', e.target.value)} /></Col>
+                <Col md={3}><Button variant="danger" onClick={() => removeTier(idx)}>Remove</Button></Col>
+              </Row>
+            ))}
+            <Button size="sm" onClick={addTier}>+ Add Tier</Button>
+          </Card.Body>
+        </Card>
+
+        {/* Description */}
+        <Form.Group className="mb-3">
           <Form.Label>Product Description</Form.Label>
           <MenuBar editor={editor} />
-          <div style={{ border: '1px solid #ced4da', borderRadius: '.25rem', minHeight: '120px', padding: '0.5rem', backgroundColor: 'white' }}>
+          <div style={{ border: '1px solid #ced4da', borderRadius: '.25rem', minHeight: '120px', padding: '.5rem', backgroundColor: 'white' }}>
             <EditorContent editor={editor} />
           </div>
         </Form.Group>
 
-        {/* Wholesale tiers */}
-        <div className="mb-3">
-          <Form.Label>Wholesale Tiers</Form.Label>
-          {form.wholesale_tiers.map((tier, index) => (
-            <Row key={index} className="mb-2">
-              <Col md={3}>
-                <Form.Control type="number" value={tier.min_qty} onChange={e => handleWholesaleChange(index, 'min_qty', e.target.value)} placeholder="Min Qty" />
-              </Col>
-              <Col md={3}>
-                <Form.Control type="number" value={tier.max_qty} onChange={e => handleWholesaleChange(index, 'max_qty', e.target.value)} placeholder="Max Qty" />
-              </Col>
-              <Col md={4}>
-                <InputGroup>
-                  <InputGroup.Text>TZS</InputGroup.Text>
-                  <Form.Control type="number" value={tier.whole_seller_price} onChange={e => handleWholesaleChange(index, 'whole_seller_price', e.target.value)} placeholder="Price" />
-                </InputGroup>
-              </Col>
-              <Col md={2}>
-                <Button variant="danger" onClick={() => removeWholesaleTier(index)}>Remove</Button>
-              </Col>
-            </Row>
-          ))}
-          <Button variant="success" onClick={addWholesaleTier}>Add Tier</Button>
-        </div>
-
-        {/* Images */}
+        {/* Existing Images */}
         <Form.Group className="mb-3">
           <Form.Label>Existing Images</Form.Label>
-          <div className="d-flex flex-wrap gap-2 mb-3">
+          <div className="d-flex flex-wrap gap-2">
             {existingImages.length === 0 && <div>No existing images</div>}
             {existingImages.map((url, idx) => (
               <div key={idx} className="position-relative" style={{ width: 100 }}>
-                <Image src={url} thumbnail width={100} height={100} alt={`Existing ${idx + 1}`} />
+                <Image src={url} thumbnail width={100} height={100} />
                 <Button size="sm" variant="danger" onClick={() => removeExistingImage(url)} className="position-absolute top-0 end-0 p-1">&times;</Button>
               </div>
             ))}
           </div>
         </Form.Group>
 
+        {/* New Images */}
         <Form.Group className="mb-3">
           <Form.Label>Upload New Images</Form.Label>
           <Form.Control type="file" multiple accept="image/*" onChange={handleImageChange} />
         </Form.Group>
 
+        {/* New Previews */}
         <div className="d-flex flex-wrap gap-2 mb-3">
-          {previewUrls.map((url, index) => (
-            <div key={index} className="position-relative" style={{ width: 100 }}>
-              <Image src={url} thumbnail width={100} height={100} alt={`New ${index + 1}`} />
-              <Button size="sm" variant="danger" onClick={() => removeNewImage(index)} className="position-absolute top-0 end-0 p-1">&times;</Button>
+          {previewUrls.map((url, idx) => (
+            <div key={idx} className="position-relative" style={{ width: 100 }}>
+              <Image src={url} thumbnail width={100} height={100} />
+              <Button size="sm" variant="danger" onClick={() => removeNewImage(idx)} className="position-absolute top-0 end-0 p-1">&times;</Button>
             </div>
           ))}
         </div>
 
-        <Button type="submit" variant="primary" disabled={submitting}>{submitting ? 'Updating...' : 'Update Product'}</Button>
+        <Button type="submit" variant="primary" disabled={submitting}>
+          {submitting ? 'Updating...' : 'Update Product'}
+        </Button>
       </Form>
     </SellerDashboardLayout>
   );
