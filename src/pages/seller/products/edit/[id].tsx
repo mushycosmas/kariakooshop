@@ -24,23 +24,18 @@ interface ProductForm {
   wholesale_tiers: { min_qty: number; max_qty: number; whole_seller_price: string }[];
 }
 
-// TipTap toolbar
 const MenuBar: React.FC<{ editor: ReturnType<typeof useEditor> | null }> = ({ editor }) => {
   if (!editor) return null;
-
-  const toggleBold = () => editor.chain().focus().toggleBold().run();
-  const toggleItalic = () => editor.chain().focus().toggleItalic().run();
-  const toggleStrike = () => editor.chain().focus().toggleStrike().run();
-  const toggleBulletList = () => editor.chain().focus().toggleBulletList().run();
-  const toggleOrderedList = () => editor.chain().focus().toggleOrderedList().run();
+  const toggle = (type: 'Bold' | 'Italic' | 'Strike' | 'BulletList' | 'OrderedList') =>
+    editor.chain().focus()[`toggle${type}`]().run();
 
   return (
     <div className="mb-2">
-      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={toggleBold} className="me-2"><b>B</b></Button>
-      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={toggleItalic} className="me-2"><i>I</i></Button>
-      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={toggleStrike} className="me-2">S</Button>
-      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={toggleBulletList} className="me-2">• List</Button>
-      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={toggleOrderedList}>1. List</Button>
+      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={() => toggle('Bold')} className="me-2"><b>B</b></Button>
+      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={() => toggle('Italic')} className="me-2"><i>I</i></Button>
+      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={() => toggle('Strike')} className="me-2">S</Button>
+      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={() => toggle('BulletList')} className="me-2">• List</Button>
+      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={() => toggle('OrderedList')}>1. List</Button>
     </div>
   );
 };
@@ -86,7 +81,6 @@ const EditProductForm: React.FC = () => {
   // Fetch product
   useEffect(() => {
     if (!id) return;
-
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -114,11 +108,10 @@ const EditProductForm: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchProduct();
   }, [id, editor]);
 
-  // Update subcategories when category changes and preselect
+  // Filter subcategories on category change
   useEffect(() => {
     if (!form.category_id) {
       setFilteredSubcategories([]);
@@ -127,7 +120,6 @@ const EditProductForm: React.FC = () => {
     const selectedCategory = categories.find(c => c.id === form.category_id);
     if (selectedCategory) {
       setFilteredSubcategories(selectedCategory.subcategories);
-      // Preselect subcategory if not in filtered
       if (!selectedCategory.subcategories.some(s => s.id === form.subcategory_id)) {
         setForm(prev => ({
           ...prev,
@@ -142,13 +134,11 @@ const EditProductForm: React.FC = () => {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // Wholesale tiers
-  const addTier = () =>
-    setForm(prev => ({
-      ...prev,
-      wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 1, max_qty: 5, whole_seller_price: '' }],
-    }));
-
+  // Wholesale tiers handlers
+  const addTier = () => setForm(prev => ({
+    ...prev,
+    wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 1, max_qty: 5, whole_seller_price: '' }]
+  }));
   const updateTier = (index: number, field: 'min_qty' | 'max_qty' | 'whole_seller_price', value: string) => {
     setForm(prev => {
       const updated = [...prev.wholesale_tiers];
@@ -156,40 +146,50 @@ const EditProductForm: React.FC = () => {
       return { ...prev, wholesale_tiers: updated };
     });
   };
+  const removeTier = (index: number) => setForm(prev => ({
+    ...prev,
+    wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index)
+  }));
 
-  const removeTier = (index: number) =>
-    setForm(prev => ({ ...prev, wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index) }));
-
-  // Images
+  // Image handlers
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     const newFiles = Array.from(files);
+
+    // Generate previews
+    const urls = newFiles.map(file => URL.createObjectURL(file));
+
     setNewImages(prev => [...prev, ...newFiles]);
-    setPreviewUrls(prev => [...prev, ...Array.from(files).map(f => URL.createObjectURL(f))]);
+    setPreviewUrls(prev => [...prev, ...urls]);
+
     e.target.value = '';
   };
 
-  const removeExistingImage = (url: string) => setExistingImages(prev => prev.filter(u => u !== url));
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
 
+  const removeExistingImage = (url: string) => setExistingImages(prev => prev.filter(u => u !== url));
   const removeNewImage = (index: number) => {
     const updatedNewImages = [...newImages];
     const updatedPreviews = [...previewUrls];
+    URL.revokeObjectURL(updatedPreviews[index]); // revoke
     updatedNewImages.splice(index, 1);
     updatedPreviews.splice(index, 1);
     setNewImages(updatedNewImages);
     setPreviewUrls(updatedPreviews);
   };
 
-  // Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.name || !form.price || !form.category_id || !form.subcategory_id || !form.location) {
       setMessage('Please fill all required fields.');
       return;
     }
-
     setSubmitting(true);
     setMessage('');
 
@@ -226,6 +226,7 @@ const EditProductForm: React.FC = () => {
       <Form onSubmit={handleSubmit} className="p-3">
         {message && <Alert variant="info">{message}</Alert>}
 
+        {/* Basic fields */}
         <Row className="mb-3">
           <Col md={6}>
             <Form.Group>
@@ -250,15 +251,14 @@ const EditProductForm: React.FC = () => {
           </Col>
         </Row>
 
+        {/* Category/Subcategory */}
         <Row className="mb-3">
           <Col md={6}>
             <Form.Group>
               <Form.Label>Category *</Form.Label>
               <Form.Select name="category_id" value={form.category_id} onChange={handleChange} required>
                 <option value="">Select Category</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </Form.Select>
             </Form.Group>
           </Col>
@@ -267,20 +267,19 @@ const EditProductForm: React.FC = () => {
               <Form.Label>Subcategory *</Form.Label>
               <Form.Select name="subcategory_id" value={form.subcategory_id} onChange={handleChange} required>
                 <option value="">Select Subcategory</option>
-                {filteredSubcategories.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                {filteredSubcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </Form.Select>
             </Form.Group>
           </Col>
         </Row>
 
+        {/* Location */}
         <Form.Group className="mb-3">
           <Form.Label>Location *</Form.Label>
           <Form.Control type="text" name="location" value={form.location} onChange={handleChange} required />
         </Form.Group>
 
-        {/* Wholesale Tiers */}
+        {/* Wholesale tiers */}
         <Card className="mb-3">
           <Card.Body>
             <h5>Wholesale Tiers</h5>
@@ -305,7 +304,7 @@ const EditProductForm: React.FC = () => {
           </div>
         </Form.Group>
 
-        {/* Existing Images */}
+        {/* Existing images */}
         <Form.Group className="mb-3">
           <Form.Label>Existing Images</Form.Label>
           <div className="d-flex flex-wrap gap-2 mb-3">
@@ -319,12 +318,13 @@ const EditProductForm: React.FC = () => {
           </div>
         </Form.Group>
 
-        {/* New Images */}
+        {/* New images */}
         <Form.Group className="mb-3">
           <Form.Label>Upload New Images</Form.Label>
           <Form.Control type="file" multiple accept="image/*" onChange={handleImageChange} />
         </Form.Group>
 
+        {/* Previews */}
         <div className="d-flex flex-wrap gap-2 mb-3">
           {previewUrls.map((url, idx) => (
             <div key={idx} className="position-relative" style={{ width: 100 }}>
