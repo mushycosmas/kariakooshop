@@ -88,7 +88,7 @@ const SellerDashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
           {/* FOOTER */}
           <div className="mt-auto">
-            <Footer />
+            {/* <Footer /> */}
           </div>
         </Col>
       </Row>

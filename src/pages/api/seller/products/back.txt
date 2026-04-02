@@ -12,6 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const id = req.query.id;
   if (!id || Array.isArray(id)) return res.status(400).json({ message: 'Invalid ID' });
   const adId = Number(id);
+  if (isNaN(adId)) return res.status(400).json({ message: 'Invalid ID' });
 
   const uploadDir = path.join(process.cwd(), 'public', 'uploads');
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -49,21 +50,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (err) return res.status(500).json({ message: 'Form parse failed', error: err });
 
       try {
-        // -------------------- Basic fields --------------------
         const toString = (val: any) => (!val ? '' : Array.isArray(val) ? val[0] : val);
 
+        // Parse and sanitize fields
         const name = toString(fields.name).trim();
         const product_description = toString(fields.product_description).trim();
         const subcategory_id = parseInt(toString(fields.subcategory_id), 10);
         const location = toString(fields.location).trim();
-        const status = toString(fields.status) || 'active';
-        const price = parseFloat(toString(fields.price)) || 0;
+        const status = toString(fields.status).trim() || 'active';
+        const price = parseFloat(toString(fields.price));
 
-        if (!name || !product_description || !price || !subcategory_id || !location) {
-          return res.status(400).json({ message: 'Missing required fields' });
+        if (!name || !product_description || !location || isNaN(price) || isNaN(subcategory_id)) {
+          return res.status(400).json({ message: 'Missing or invalid required fields' });
         }
 
-        // -------------------- Update product --------------------
+        // -------------------- Update main product --------------------
         await db.execute(
           `UPDATE ads 
            SET name=?, product_description=?, subcategory_id=?, status=?, price=?, location=? 
@@ -71,31 +72,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           [name, product_description, subcategory_id, status, price, location, adId]
         );
 
-        // -------------------- Wholesale tiers --------------------
+        // -------------------- Update wholesale tiers --------------------
         const tiersRaw = toString(fields.wholesale_tiers);
         let wholesaleTiers: any[] = [];
         if (tiersRaw) {
-          try { wholesaleTiers = JSON.parse(tiersRaw); } catch { wholesaleTiers = []; }
+          try {
+            wholesaleTiers = JSON.parse(tiersRaw);
+          } catch (err) {
+            wholesaleTiers = [];
+          }
         }
 
-        // Delete old tiers
         await db.execute('DELETE FROM ad_wholesale_tiers WHERE ad_id=?', [adId]);
-
-        // Insert new tiers
         for (const tier of wholesaleTiers) {
-          if (tier.min_qty > 0 && tier.max_qty >= tier.min_qty && tier.whole_seller_price > 0) {
+          const minQty = Number(tier.min_qty);
+          const maxQty = Number(tier.max_qty);
+          const priceTier = parseFloat(tier.whole_seller_price);
+          if (!isNaN(minQty) && !isNaN(maxQty) && !isNaN(priceTier) && minQty > 0 && maxQty >= minQty && priceTier > 0) {
             await db.execute(
               'INSERT INTO ad_wholesale_tiers (ad_id, min_qty, max_qty, whole_seller_price) VALUES (?, ?, ?, ?)',
-              [adId, tier.min_qty, tier.max_qty, tier.whole_seller_price]
+              [adId, minQty, maxQty, priceTier]
             );
           }
         }
 
-        // -------------------- Images --------------------
-        const newImages = files['images[]'] 
-          ? Array.isArray(files['images[]']) 
-            ? files['images[]'] 
-            : [files['images[]']] 
+        // -------------------- Handle new images --------------------
+        const newImages = files['newImages[]']
+          ? Array.isArray(files['newImages[]'])
+            ? files['newImages[]']
+            : [files['newImages[]']]
           : [];
         const newlyInsertedPaths: string[] = [];
 
@@ -110,15 +115,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           newlyInsertedPaths.push(relPath);
         }
 
-        // Existing images from frontend
+        // -------------------- Handle existing images --------------------
         const existingRaw = fields.existingImages || [];
         const existingImages = Array.isArray(existingRaw) ? existingRaw : [existingRaw];
 
-        // Delete removed images
         const [dbImages] = await db.query('SELECT path FROM ad_images WHERE ad_id = ?', [adId]);
         const dbImagePaths = (dbImages as any[]).map(img => img.path);
+
+        // Delete images that were removed in the form
         const keepPaths = [...existingImages, ...newlyInsertedPaths];
-        const toDelete = dbImagePaths.filter((p) => !keepPaths.includes(p));
+        const toDelete = dbImagePaths.filter(p => !keepPaths.includes(p));
 
         for (const relPath of toDelete) {
           const fullPath = path.join(process.cwd(), 'public', relPath);
@@ -126,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           await db.execute('DELETE FROM ad_images WHERE ad_id=? AND path=?', [adId, relPath]);
         }
 
-        return res.status(200).json({ message: 'Product updated successfully' });
+        return res.status(200).json({ message: 'Product updated successfully', images: keepPaths });
       } catch (error) {
         console.error('PUT error:', error);
         return res.status(500).json({ message: 'Database update failed', error });

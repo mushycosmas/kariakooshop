@@ -27,7 +27,6 @@ interface ProductForm {
 // Rich Text Editor Toolbar
 const MenuBar = ({ editor }: { editor: ReturnType<typeof useEditor> | null }) => {
   if (!editor) return null;
-
   const toggleStyle = (style: string) => editor.chain().focus()[`toggle${style}`]().run();
 
   return (
@@ -79,7 +78,7 @@ const EditProductForm: React.FC = () => {
       .catch(() => setMessage('Failed to load categories'));
   }, []);
 
-  // Filter subcategories when category changes
+  // Filter subcategories
   useEffect(() => {
     const selectedCategory = categories.find(c => c.id === form.category_id);
     setFilteredSubcategories(selectedCategory ? selectedCategory.subcategories : []);
@@ -120,6 +119,7 @@ const EditProductForm: React.FC = () => {
     fetchProduct();
   }, [id, editor]);
 
+  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -140,17 +140,17 @@ const EditProductForm: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+
     const newFiles = Array.from(files);
-    const updatedImages = [...newImages, ...newFiles];
-    setNewImages(updatedImages);
-    setPreviewUrls(updatedImages.map(f => URL.createObjectURL(f)));
+    setNewImages(prev => [...prev, ...newFiles]);
+    setPreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
     e.target.value = '';
   };
+
   const removeExistingImage = (url: string) => setExistingImages(prev => prev.filter(u => u !== url));
   const removeNewImage = (index: number) => {
-    const updated = newImages.filter((_, i) => i !== index);
-    setNewImages(updated);
-    setPreviewUrls(updated.map(f => URL.createObjectURL(f)));
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
   // Submit form
@@ -191,13 +191,14 @@ const EditProductForm: React.FC = () => {
     }
   };
 
-  if (loading) return <Spinner animation="border" />;
+  if (loading) return <div className="text-center mt-5"><Spinner animation="border" /></div>;
 
   return (
     <SellerDashboardLayout>
       <Form onSubmit={handleSubmit} className="p-3">
         {message && <Alert variant="info">{message}</Alert>}
 
+        {/* Basic Info */}
         <Row className="mb-3">
           <Col md={6}>
             <Form.Group>
@@ -222,6 +223,7 @@ const EditProductForm: React.FC = () => {
           </Col>
         </Row>
 
+        {/* Category & Subcategory */}
         <Row className="mb-3">
           <Col md={6}>
             <Form.Group>
@@ -243,6 +245,7 @@ const EditProductForm: React.FC = () => {
           </Col>
         </Row>
 
+        {/* Location */}
         <Form.Group className="mb-3">
           <Form.Label>Location *</Form.Label>
           <Form.Control type="text" name="location" value={form.location} onChange={handleChange} required />
@@ -264,7 +267,7 @@ const EditProductForm: React.FC = () => {
           </Card.Body>
         </Card>
 
-        {/* Description */}
+        {/* Product Description */}
         <Form.Group className="mb-3">
           <Form.Label>Product Description</Form.Label>
           <MenuBar editor={editor} />
@@ -294,9 +297,9 @@ const EditProductForm: React.FC = () => {
         </Form.Group>
 
         <div className="d-flex flex-wrap gap-2 mb-3">
-          {previewUrls.map((url, idx) => (
+          {newImages.map((file, idx) => (
             <div key={idx} className="position-relative" style={{ width: 100 }}>
-              <Image src={url} thumbnail width={100} height={100} />
+              <Image src={previewUrls[idx]} thumbnail width={100} height={100} />
               <Button size="sm" variant="danger" onClick={() => removeNewImage(idx)} className="position-absolute top-0 end-0 p-1">&times;</Button>
             </div>
           ))}
