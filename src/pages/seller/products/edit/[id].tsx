@@ -24,18 +24,22 @@ interface ProductForm {
   wholesale_tiers: { min_qty: number; max_qty: number; whole_seller_price: string }[];
 }
 
-// Rich Text Editor Toolbar
 const MenuBar = ({ editor }: { editor: ReturnType<typeof useEditor> | null }) => {
   if (!editor) return null;
-  const toggleStyle = (style: string) => editor.chain().focus()[`toggle${style}`]().run();
+
+  const toggleBold = () => editor.chain().focus().toggleBold().run();
+  const toggleItalic = () => editor.chain().focus().toggleItalic().run();
+  const toggleStrike = () => editor.chain().focus().toggleStrike().run();
+  const toggleBulletList = () => editor.chain().focus().toggleBulletList().run();
+  const toggleOrderedList = () => editor.chain().focus().toggleOrderedList().run();
 
   return (
     <div className="mb-2">
-      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={() => toggleStyle('Bold')} className="me-2"><b>B</b></Button>
-      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={() => toggleStyle('Italic')} className="me-2"><i>I</i></Button>
-      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={() => toggleStyle('Strike')} className="me-2">S</Button>
-      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={() => toggleStyle('BulletList')} className="me-2">• List</Button>
-      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={() => toggleStyle('OrderedList')}>1. List</Button>
+      <Button size="sm" variant={editor.isActive('bold') ? 'primary' : 'light'} onClick={toggleBold} className="me-2"><b>B</b></Button>
+      <Button size="sm" variant={editor.isActive('italic') ? 'primary' : 'light'} onClick={toggleItalic} className="me-2"><i>I</i></Button>
+      <Button size="sm" variant={editor.isActive('strike') ? 'primary' : 'light'} onClick={toggleStrike} className="me-2">S</Button>
+      <Button size="sm" variant={editor.isActive('bulletList') ? 'primary' : 'light'} onClick={toggleBulletList} className="me-2">• List</Button>
+      <Button size="sm" variant={editor.isActive('orderedList') ? 'primary' : 'light'} onClick={toggleOrderedList}>1. List</Button>
     </div>
   );
 };
@@ -56,7 +60,7 @@ const EditProductForm: React.FC = () => {
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [filteredSubcategories, setFilteredSubcategories] = useState<{id:string,name:string}[]>([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState<{ id: string; name: string }[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -89,8 +93,8 @@ const EditProductForm: React.FC = () => {
     if (!id) return;
 
     const fetchProduct = async () => {
-      setLoading(true);
       try {
+        setLoading(true);
         const res = await fetch(`/api/seller/products/${id}`);
         if (!res.ok) throw new Error('Failed to fetch product');
         const data = await res.json();
@@ -108,8 +112,8 @@ const EditProductForm: React.FC = () => {
 
         setExistingImages(data.images || []);
         editor?.commands.setContent(data.product.product_description || '');
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
         setMessage('Error loading product data');
       } finally {
         setLoading(false);
@@ -119,7 +123,7 @@ const EditProductForm: React.FC = () => {
     fetchProduct();
   }, [id, editor]);
 
-  // Handle input changes
+  // Handle form changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
@@ -136,14 +140,14 @@ const EditProductForm: React.FC = () => {
   };
   const removeTier = (index: number) => setForm(prev => ({ ...prev, wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index) }));
 
-  // Images
+  // Image handling
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+    if (!e.target.files) return;
 
-    const newFiles = Array.from(files);
-    setNewImages(prev => [...prev, ...newFiles]);
-    setPreviewUrls(prev => [...prev, ...newFiles.map(f => URL.createObjectURL(f))]);
+    const files = Array.from(e.target.files);
+    setNewImages(prev => [...prev, ...files]);
+    const urls = files.map(f => URL.createObjectURL(f));
+    setPreviewUrls(prev => [...prev, ...urls]);
     e.target.value = '';
   };
 
@@ -153,10 +157,8 @@ const EditProductForm: React.FC = () => {
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.name || !form.price || !form.category_id || !form.subcategory_id || !form.location) {
       setMessage('Please fill all required fields.');
       return;
@@ -164,7 +166,6 @@ const EditProductForm: React.FC = () => {
 
     setSubmitting(true);
     setMessage('');
-
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => {
@@ -183,22 +184,21 @@ const EditProductForm: React.FC = () => {
       } else {
         setMessage(result.message || 'Update failed.');
       }
-    } catch (error) {
-      console.error(error);
-      setMessage('An error occurred while updating the product.');
+    } catch (err) {
+      console.error(err);
+      setMessage('Error updating product.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="text-center mt-5"><Spinner animation="border" /></div>;
+  if (loading) return <Spinner animation="border" />;
 
   return (
     <SellerDashboardLayout>
       <Form onSubmit={handleSubmit} className="p-3">
         {message && <Alert variant="info">{message}</Alert>}
 
-        {/* Basic Info */}
         <Row className="mb-3">
           <Col md={6}>
             <Form.Group>
@@ -223,7 +223,6 @@ const EditProductForm: React.FC = () => {
           </Col>
         </Row>
 
-        {/* Category & Subcategory */}
         <Row className="mb-3">
           <Col md={6}>
             <Form.Group>
@@ -245,7 +244,6 @@ const EditProductForm: React.FC = () => {
           </Col>
         </Row>
 
-        {/* Location */}
         <Form.Group className="mb-3">
           <Form.Label>Location *</Form.Label>
           <Form.Control type="text" name="location" value={form.location} onChange={handleChange} required />
@@ -267,7 +265,7 @@ const EditProductForm: React.FC = () => {
           </Card.Body>
         </Card>
 
-        {/* Product Description */}
+        {/* Description */}
         <Form.Group className="mb-3">
           <Form.Label>Product Description</Form.Label>
           <MenuBar editor={editor} />
@@ -279,7 +277,7 @@ const EditProductForm: React.FC = () => {
         {/* Existing Images */}
         <Form.Group className="mb-3">
           <Form.Label>Existing Images</Form.Label>
-          <div className="d-flex flex-wrap gap-2 mb-3">
+          <div className="d-flex flex-wrap gap-2">
             {existingImages.length === 0 && <div>No existing images</div>}
             {existingImages.map((url, idx) => (
               <div key={idx} className="position-relative" style={{ width: 100 }}>
@@ -296,10 +294,11 @@ const EditProductForm: React.FC = () => {
           <Form.Control type="file" multiple accept="image/*" onChange={handleImageChange} />
         </Form.Group>
 
+        {/* New Previews */}
         <div className="d-flex flex-wrap gap-2 mb-3">
-          {newImages.map((file, idx) => (
+          {previewUrls.map((url, idx) => (
             <div key={idx} className="position-relative" style={{ width: 100 }}>
-              <Image src={previewUrls[idx]} thumbnail width={100} height={100} />
+              <Image src={url} thumbnail width={100} height={100} />
               <Button size="sm" variant="danger" onClick={() => removeNewImage(idx)} className="position-absolute top-0 end-0 p-1">&times;</Button>
             </div>
           ))}
