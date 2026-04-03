@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Card, Row, Col } from "react-bootstrap";
 import { FaBoxOpen, FaEye, FaEnvelope } from "react-icons/fa";
+import TopProducts from "@/components/products/TopProducts";
 
 import {
   LineChart,
@@ -78,17 +79,18 @@ const Page = () => {
         // Format date nicely for display
         const formattedData = data.map((item) => {
           let displayDate = item.date;
+
           if (range === "daily") {
             const d = new Date(item.date);
             displayDate = `${d.getDate()}/${d.getMonth() + 1}`; // e.g., 22/3
           } else if (range === "monthly") {
-            // item.date is like "2026-03", format as "Mar 2026"
             const [year, month] = item.date.split("-");
             displayDate = `${new Date(+year, +month - 1).toLocaleString("default", {
               month: "short",
             })} ${year}`;
           }
           // weekly can stay as "Week 1", "Week 2", etc.
+
           return { ...item, date: displayDate };
         });
 
@@ -159,7 +161,6 @@ const Page = () => {
           <Col>
             <Card className="shadow-sm border-0 rounded-4">
               <Card.Body>
-                {/* Header + Dropdown */}
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="fw-bold mb-0">Ads Views</h5>
                   <select
@@ -173,35 +174,26 @@ const Page = () => {
                   </select>
                 </div>
 
-                {/* Chart */}
                 {loading ? (
                   <p>Loading chart...</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={dailyViews}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="date"
-                        angle={0}
-                        textAnchor="middle"
-                        interval={0}
-                      />
+                      <XAxis dataKey="date" angle={0} textAnchor="middle" interval={0} />
                       <YAxis />
                       <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="views"
-                        stroke="#0d6efd"
-                        strokeWidth={3}
-                      />
+                      <Line type="monotone" dataKey="views" stroke="#0d6efd" strokeWidth={3} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
-
               </Card.Body>
             </Card>
           </Col>
         </Row>
+
+        {/* TOP 10 MOST VIEWED PRODUCTS */}
+        {session?.user?.id && <TopProducts sellerId={session.user.id} />}
 
       </div>
     </SellerDashboardLayout>
