@@ -25,11 +25,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   ads.id,
   ads.name,
   ads.viewed,
-  ad_images.path AS image
+  MIN(ad_images.path) AS image
 FROM ads
 LEFT JOIN ad_images ON ad_images.ad_id = ads.id
 WHERE ads.user_id = ?
-GROUP BY ads.id
+GROUP BY ads.id, ads.name, ads.viewed
 ORDER BY ads.viewed DESC
 LIMIT 10;`,
       [sellerId]
