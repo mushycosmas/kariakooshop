@@ -7,10 +7,25 @@ import { useRouter } from "next/navigation";
 import { Card, Row, Col } from "react-bootstrap";
 import { FaBoxOpen, FaEye, FaEnvelope } from "react-icons/fa";
 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+
 type Stats = {
   totalAds: number;
   totalViews: number;
   totalMessages: number;
+};
+
+type DailyView = {
+  date: string;
+  views: number;
 };
 
 const Page = () => {
@@ -23,60 +38,92 @@ const Page = () => {
     totalMessages: 0,
   });
 
+  const [dailyViews, setDailyViews] = useState<DailyView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState("daily");
 
-  // Redirect if not authenticated
+  // Redirect if not logged in
   useEffect(() => {
     if (status === "loading") return;
-
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  // Fetch real stats from API
+  // Fetch stats
   useEffect(() => {
+    if (!session?.user?.id) return;
     const fetchStats = async () => {
-      if (!session?.user?.id) return;
-      
+      try {
+        const res = await fetch(`/api/seller/stats?sellerId=${session.user.id}`);
+        const data = await res.json();
+        setStats(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchStats();
+  }, [session?.user?.id]);
 
+  // Fetch views based on range
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const fetchViews = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/seller/stats?sellerId=${session.user.id}`);
-        if (!res.ok) throw new Error("Failed to fetch stats");
+        const res = await fetch(
+          `/api/seller/daily-views?sellerId=${session.user.id}&range=${range}`
+        );
+        const data: DailyView[] = await res.json();
 
-        const data: Stats = await res.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Error fetching stats:", error);
+        // Format date nicely for display
+        const formattedData = data.map((item) => {
+          let displayDate = item.date;
+          if (range === "daily") {
+            const d = new Date(item.date);
+            displayDate = `${d.getDate()}/${d.getMonth() + 1}`; // e.g., 22/3
+          } else if (range === "monthly") {
+            // item.date is like "2026-03", format as "Mar 2026"
+            const [year, month] = item.date.split("-");
+            displayDate = `${new Date(+year, +month - 1).toLocaleString("default", {
+              month: "short",
+            })} ${year}`;
+          }
+          // weekly can stay as "Week 1", "Week 2", etc.
+          return { ...item, date: displayDate };
+        });
+
+        setDailyViews(formattedData);
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
-  }, [session?.user?.id]);
+    fetchViews();
+  }, [session?.user?.id, range]);
 
   return (
     <SellerDashboardLayout>
       <div className="container-fluid">
-        {/* Page Header */}
+
+        {/* HEADER */}
         <div className="mb-4">
           <h2 className="fw-bold">Dashboard Overview</h2>
           <p className="text-muted">
-            Welcome back, {session?.user?.name || "Seller"} 👋 Here’s a quick summary of your ads performance.
+            Welcome back, {session?.user?.name || "Seller"} 👋
           </p>
         </div>
 
-        {/* Stats Cards */}
+        {/* STATS */}
         <Row className="g-4">
           <Col md={4}>
             <Card className="shadow-sm border-0 rounded-4">
               <Card.Body className="d-flex align-items-center gap-3">
                 <FaBoxOpen size={30} className="text-primary" />
                 <div>
-                  <h6 className="mb-0 text-muted">Ads Posted</h6>
-                  <h4 className="fw-bold">{loading ? "..." : stats.totalAds}</h4>
+                  <h6 className="text-muted">Ads Posted</h6>
+                  <h4>{stats.totalAds}</h4>
                 </div>
               </Card.Body>
             </Card>
@@ -87,8 +134,8 @@ const Page = () => {
               <Card.Body className="d-flex align-items-center gap-3">
                 <FaEye size={30} className="text-success" />
                 <div>
-                  <h6 className="mb-0 text-muted">Total Views</h6>
-                  <h4 className="fw-bold">{loading ? "..." : stats.totalViews}</h4>
+                  <h6 className="text-muted">Total Views</h6>
+                  <h4>{stats.totalViews}</h4>
                 </div>
               </Card.Body>
             </Card>
@@ -99,13 +146,63 @@ const Page = () => {
               <Card.Body className="d-flex align-items-center gap-3">
                 <FaEnvelope size={30} className="text-warning" />
                 <div>
-                  <h6 className="mb-0 text-muted">Messages</h6>
-                  <h4 className="fw-bold">{loading ? "..." : stats.totalMessages}</h4>
+                  <h6 className="text-muted">Messages</h6>
+                  <h4>{stats.totalMessages}</h4>
                 </div>
               </Card.Body>
             </Card>
           </Col>
         </Row>
+
+        {/* GRAPH */}
+        <Row className="mt-4">
+          <Col>
+            <Card className="shadow-sm border-0 rounded-4">
+              <Card.Body>
+                {/* Header + Dropdown */}
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="fw-bold mb-0">Ads Views</h5>
+                  <select
+                    className="form-select w-auto"
+                    value={range}
+                    onChange={(e) => setRange(e.target.value)}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+
+                {/* Chart */}
+                {loading ? (
+                  <p>Loading chart...</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={dailyViews}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        angle={0}
+                        textAnchor="middle"
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="views"
+                        stroke="#0d6efd"
+                        strokeWidth={3}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
       </div>
     </SellerDashboardLayout>
   );
