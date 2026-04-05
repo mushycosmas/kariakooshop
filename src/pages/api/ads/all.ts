@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { db } from "../../../lib/db";
 
-
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -26,17 +24,18 @@ export default async function handler(
     let whereClauses: string[] = [];
     let params: any[] = [];
 
-    // ✅ Search by multiple words in product name
+    // ---------------- SEARCH ----------------
     if (search) {
       const words = (search as string).trim().split(/\s+/);
+
       words.forEach((word) => {
         whereClauses.push("a.name LIKE ?");
         params.push(`%${word}%`);
       });
     }
 
-    // Filter by subcategory
-    if (subcategory_id && subcategory_id !== "All" && subcategory_id !== "") {
+    // ---------------- SUBCATEGORY FILTER ----------------
+    if (subcategory_id && subcategory_id !== "All") {
       whereClauses.push("a.subcategory_id = ?");
       params.push(subcategory_id);
     }
@@ -44,7 +43,7 @@ export default async function handler(
     const whereSQL =
       whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-    // 🔥 MAIN ADS QUERY
+    // ---------------- MAIN QUERY ----------------
     const adQuery = `
       SELECT 
         a.*, 
@@ -66,8 +65,9 @@ export default async function handler(
       LIMIT ? OFFSET ?
     `;
 
-    params.push(sizeNum, offset);
-    const [ads] = await db.query(adQuery, params);
+    const queryParams = [...params, sizeNum, offset];
+
+    const [ads] = await db.query(adQuery, queryParams);
     const adList = ads as any[];
 
     if (adList.length === 0) {
@@ -76,38 +76,39 @@ export default async function handler(
 
     const adIds = adList.map((ad) => ad.id);
 
-    // 🔥 IMAGES
+    // ---------------- IMAGES ----------------
     const [images] = await db.query(
-      `SELECT * FROM ad_images WHERE ad_id IN (${adIds
-        .map(() => "?")
-        .join(",")})`,
+      `SELECT * FROM ad_images WHERE ad_id IN (${adIds.map(() => "?").join(",")})`,
       adIds
     );
 
-    const imagesByAd: { [key: number]: any[] } = {};
+    const imagesByAd: Record<number, any[]> = {};
     (images as any[]).forEach((img) => {
       if (!imagesByAd[img.ad_id]) imagesByAd[img.ad_id] = [];
       imagesByAd[img.ad_id].push(img);
     });
 
-    // 🔥 WHOLESALE TIERS
+    // ---------------- WHOLESALE ----------------
     const [tiers] = await db.query(
-      `SELECT * FROM ad_wholesale_tiers WHERE ad_id IN (${adIds
-        .map(() => "?")
-        .join(",")}) ORDER BY min_qty ASC`,
+      `SELECT * FROM ad_wholesale_tiers 
+       WHERE ad_id IN (${adIds.map(() => "?").join(",")})
+       ORDER BY min_qty ASC`,
       adIds
     );
 
-    const tiersByAd: { [key: number]: any[] } = {};
+    const tiersByAd: Record<number, any[]> = {};
     (tiers as any[]).forEach((tier) => {
       if (!tiersByAd[tier.ad_id]) tiersByAd[tier.ad_id] = [];
       tiersByAd[tier.ad_id].push(tier);
     });
 
-    // 🔥 FORMAT ADS
+    // ---------------- FINAL FORMAT ----------------
     const adsWithDetails = adList.map((ad) => ({
       id: ad.id,
       slug: ad.slug,
+
+      // ✅ IMPORTANT FIX (FOR SIMILAR ADS)
+      subcategory_id: ad.subcategory_id,
 
       // BASIC
       name: ad.name,
@@ -151,7 +152,7 @@ export default async function handler(
       },
     }));
 
-    // 🔥 TOTAL COUNT
+    // ---------------- COUNT QUERY ----------------
     const countQuery = `
       SELECT COUNT(*) as total
       FROM ads a
@@ -161,16 +162,15 @@ export default async function handler(
       ${whereSQL}
     `;
 
-    const [countRows] = await db.query(
-      countQuery,
-      params.slice(0, params.length - 2)
-    );
+    const [countRows] = await db.query(countQuery, params);
     const total = (countRows as any)[0]?.total || 0;
 
+    // ---------------- RESPONSE ----------------
     return res.status(200).json({
       products: adsWithDetails,
       total,
     });
+
   } catch (error) {
     console.error("API error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
