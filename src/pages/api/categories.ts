@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (req.method) {
       case 'GET': {
         const [rows] = await db.query<RowDataPacket[]>(
-          'SELECT id, name, slug, created_at, updated_at FROM categories ORDER BY created_at DESC'
+          'SELECT id, name,icon, slug, created_at, updated_at FROM categories ORDER BY created_at DESC'
         );
         return res.status(200).json(rows);
       }
