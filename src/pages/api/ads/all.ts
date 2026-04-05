@@ -1,7 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { db } from "../../../lib/db";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const {
     page = "1",
     pageSize = "12",
@@ -21,11 +26,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let whereClauses: string[] = [];
     let params: any[] = [];
 
+    // ✅ Search by multiple words in product name
     if (search) {
-      whereClauses.push("a.name LIKE ?");
-      params.push(`%${search}%`);
+      const words = (search as string).trim().split(/\s+/);
+      words.forEach((word) => {
+        whereClauses.push("a.name LIKE ?");
+        params.push(`%${word}%`);
+      });
     }
 
+    // Filter by subcategory
     if (subcategory_id && subcategory_id !== "All" && subcategory_id !== "") {
       whereClauses.push("a.subcategory_id = ?");
       params.push(subcategory_id);
@@ -34,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const whereSQL =
       whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-    // 🔥 MAIN ADS
+    // 🔥 MAIN ADS QUERY
     const adQuery = `
       SELECT 
         a.*, 
@@ -57,7 +67,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     `;
 
     params.push(sizeNum, offset);
-
     const [ads] = await db.query(adQuery, params);
     const adList = ads as any[];
 
@@ -69,7 +78,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 🔥 IMAGES
     const [images] = await db.query(
-      `SELECT * FROM ad_images WHERE ad_id IN (${adIds.map(() => "?").join(",")})`,
+      `SELECT * FROM ad_images WHERE ad_id IN (${adIds
+        .map(() => "?")
+        .join(",")})`,
       adIds
     );
 
@@ -81,7 +92,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 🔥 WHOLESALE TIERS
     const [tiers] = await db.query(
-      `SELECT * FROM ad_wholesale_tiers WHERE ad_id IN (${adIds.map(() => "?").join(",")}) ORDER BY min_qty ASC`,
+      `SELECT * FROM ad_wholesale_tiers WHERE ad_id IN (${adIds
+        .map(() => "?")
+        .join(",")}) ORDER BY min_qty ASC`,
       adIds
     );
 
@@ -91,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       tiersByAd[tier.ad_id].push(tier);
     });
 
-    // 🔥 FINAL FORMAT
+    // 🔥 FORMAT ADS
     const adsWithDetails = adList.map((ad) => ({
       id: ad.id,
       slug: ad.slug,
@@ -138,7 +151,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     }));
 
-    // 🔥 COUNT
+    // 🔥 TOTAL COUNT
     const countQuery = `
       SELECT COUNT(*) as total
       FROM ads a
@@ -152,14 +165,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       countQuery,
       params.slice(0, params.length - 2)
     );
-
     const total = (countRows as any)[0]?.total || 0;
 
     return res.status(200).json({
       products: adsWithDetails,
       total,
     });
-
   } catch (error) {
     console.error("API error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
