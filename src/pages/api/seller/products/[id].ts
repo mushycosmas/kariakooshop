@@ -18,62 +18,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
   // -------------------- GET --------------------
-if (req.method === 'GET') {
-  try {
-    const [productRows] = await db.query(
-      `
-      SELECT 
-        a.*, 
-        c.id AS category_id, 
-        c.name AS category_name,
-        s.id AS subcategory_id,
-        s.name AS subcategory_name
-      FROM ads a
-      LEFT JOIN sub_categories s ON a.subcategory_id = s.id
-      LEFT JOIN categories c ON s.category_id = c.id
-      WHERE a.id = ?
-      `,
-      [adId]
-    );
+  if (req.method === 'GET') {
+    try {
+      const [productRows] = await db.query(
+        `
+        SELECT 
+          a.*, 
+          c.id AS category_id, 
+          c.name AS category_name,
+          s.id AS subcategory_id,
+          s.name AS subcategory_name,
+          d.id AS district_id,
+          d.name AS district_name
+        FROM ads a
+        LEFT JOIN sub_categories s ON a.subcategory_id = s.id
+        LEFT JOIN categories c ON s.category_id = c.id
+        LEFT JOIN districts d ON a.district_id = d.id
+        WHERE a.id = ?
+        `,
+        [adId]
+      );
 
-    if ((productRows as any[]).length === 0) {
-      return res.status(404).json({ message: 'Product not found' });
+      if ((productRows as any[]).length === 0) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+
+      const product = (productRows as any[])[0];
+
+      // Fetch images
+      const [imageRows] = await db.query('SELECT path FROM ad_images WHERE ad_id = ?', [adId]);
+      const images = (imageRows as any[]).map(row => row.path);
+
+      // Fetch wholesale tiers
+      const [tierRows] = await db.query(
+        'SELECT min_qty, max_qty, whole_seller_price FROM ad_wholesale_tiers WHERE ad_id = ?',
+        [adId]
+      );
+      const wholesale_tiers = tierRows as any[];
+
+      return res.status(200).json({
+        product,
+        category: { id: product.category_id, name: product.category_name },
+        subcategory: { id: product.subcategory_id, name: product.subcategory_name },
+        district: { id: product.district_id, name: product.district_name },
+        images,
+        wholesale_tiers,
+      });
+    } catch (error) {
+      console.error('GET error:', error);
+      return res.status(500).json({ message: 'Error fetching product' });
     }
-
-    const product = (productRows as any[])[0];
-
-    // Fetch images
-    const [imageRows] = await db.query(
-      'SELECT path FROM ad_images WHERE ad_id = ?',
-      [adId]
-    );
-    const images = (imageRows as any[]).map((row) => row.path);
-
-    // Fetch wholesale tiers
-    const [tierRows] = await db.query(
-      'SELECT min_qty, max_qty, whole_seller_price FROM ad_wholesale_tiers WHERE ad_id = ?',
-      [adId]
-    );
-    const wholesale_tiers = tierRows as any[];
-
-    return res.status(200).json({
-      product,
-      category: {
-        id: product.category_id,
-        name: product.category_name
-      },
-      subcategory: {
-        id: product.subcategory_id,
-        name: product.subcategory_name
-      },
-      images,
-      wholesale_tiers
-    });
-  } catch (error) {
-    console.error('GET error:', error);
-    return res.status(500).json({ message: 'Error fetching product' });
   }
-}
+
   // -------------------- PUT --------------------
   if (req.method === 'PUT') {
     const form = formidable({
@@ -89,27 +85,28 @@ if (req.method === 'GET') {
       try {
         const toString = (val: any) => (!val ? '' : Array.isArray(val) ? val[0] : val);
 
-        // Parse and sanitize fields
+        // Parse fields
         const name = toString(fields.name).trim();
         const product_description = toString(fields.product_description).trim();
         const subcategory_id = parseInt(toString(fields.subcategory_id), 10);
+        const district_id = parseInt(toString(fields.district_id), 10);
         const location = toString(fields.location).trim();
         const status = toString(fields.status).trim() || 'active';
         const price = parseFloat(toString(fields.price));
 
-        if (!name || !product_description || !location || isNaN(price) || isNaN(subcategory_id)) {
+        if (!name || !product_description || !location || isNaN(price) || isNaN(subcategory_id) || isNaN(district_id)) {
           return res.status(400).json({ message: 'Missing or invalid required fields' });
         }
 
-        // -------------------- Update main product --------------------
+        // Update main product
         await db.execute(
           `UPDATE ads 
-           SET name=?, product_description=?, subcategory_id=?, status=?, price=?, location=? 
+           SET name=?, product_description=?, subcategory_id=?, district_id=?, status=?, price=?, location=? 
            WHERE id=?`,
-          [name, product_description, subcategory_id, status, price, location, adId]
+          [name, product_description, subcategory_id, district_id, status, price, location, adId]
         );
 
-        // -------------------- Update wholesale tiers --------------------
+        // Update wholesale tiers
         const tiersRaw = toString(fields.wholesale_tiers);
         let wholesaleTiers: any[] = [];
         if (tiersRaw) {
@@ -133,7 +130,7 @@ if (req.method === 'GET') {
           }
         }
 
-        // -------------------- Handle new images --------------------
+        // Handle new images
         const newImages = files['newImages[]']
           ? Array.isArray(files['newImages[]'])
             ? files['newImages[]']
@@ -152,14 +149,13 @@ if (req.method === 'GET') {
           newlyInsertedPaths.push(relPath);
         }
 
-        // -------------------- Handle existing images --------------------
+        // Handle existing images
         const existingRaw = fields.existingImages || [];
         const existingImages = Array.isArray(existingRaw) ? existingRaw : [existingRaw];
 
         const [dbImages] = await db.query('SELECT path FROM ad_images WHERE ad_id = ?', [adId]);
         const dbImagePaths = (dbImages as any[]).map(img => img.path);
 
-        // Delete images that were removed in the form
         const keepPaths = [...existingImages, ...newlyInsertedPaths];
         const toDelete = dbImagePaths.filter(p => !keepPaths.includes(p));
 
