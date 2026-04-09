@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card } from 'react-bootstrap';
+import { Card, Badge } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 
 export interface ProductImage {
@@ -12,8 +12,8 @@ export interface ProductImage {
 
 export interface WholesaleTier {
   min_qty: number;
-  max_qty: number; 
-whole_seller_price: number| string;
+  max_qty: number;
+  whole_seller_price: number | string;
 }
 
 export interface Product {
@@ -21,184 +21,201 @@ export interface Product {
   name: string;
   price: number;
   slug: string;
-  path?: string;
-  description?: string;
   location?: string;
-  postedTime?: string;
+  created_at?: string;
+
   images?: ProductImage[];
-  wholesale_tiers?: WholesaleTier[]; // ✅ IMPORTANT
+  wholesale_tiers?: WholesaleTier[];
+
   category?: { slug: string };
   subcategory?: { slug: string };
+
+  district?: { id: number; name: string };
 }
 
-interface ProductCardProps {
+interface Props {
   product: Product;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<Props> = ({ product }) => {
   const router = useRouter();
-  const firstImage = product.images?.[0]?.path;
+  const image = product.images?.[0]?.path;
 
-  // ✅ Get lowest price (wholesale or normal)
-  const getDisplayPrice = () => {
-    if (product.wholesale_tiers && product.wholesale_tiers.length > 0) {
-      const validPrices = product.wholesale_tiers
-        .map((t) => Number(t.whole_seller_price))
-        .filter((p) => p > 0);
+  // ---------------- PRICE ----------------
+  const getPrice = () => {
+    if (product.wholesale_tiers?.length) {
+      const prices = product.wholesale_tiers
+        .map(t => Number(t.whole_seller_price))
+        .filter(p => p > 0);
 
-      if (validPrices.length > 0) {
-        return Math.min(...validPrices);
-      }
+      if (prices.length) return Math.min(...prices);
     }
     return product.price || 0;
   };
 
-  const displayPrice = getDisplayPrice();
-  const isWholesale = product.wholesale_tiers && product.wholesale_tiers.length > 0;
+  const price = getPrice();
+  const isWholesale = !!product.wholesale_tiers?.length;
 
-  const handleClick = async () => {
-    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
+  // ---------------- TIME AGO ----------------
+  const timeAgo = (date?: string) => {
+    if (!date) return '';
 
-    const categorySlug = product.category?.slug || 'category';
-    const subcategorySlug = product.subcategory?.slug || 'subcategory';
-    const productSlug = product.slug;
+    const diff = Math.floor(
+      (new Date().getTime() - new Date(date).getTime()) / 1000
+    );
 
-    try {
-      await fetch(`/api/ads/${productSlug}/view`, {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Failed to increment view count:', error);
-    }
-
-    const url = `/products/${categorySlug}/${subcategorySlug}/${productSlug}`;
-    router.push(url);
-    window.location.href = url;
+    if (diff < 60) return `${diff}s`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 2592000) return `${Math.floor(diff / 86400)}d`;
+    return `${Math.floor(diff / 2592000)}mo`;
   };
 
-  // ✅ Time ago helper
-  const getTimeAgo = (dateString: string) => {
-    const now = new Date();
-    const posted = new Date(dateString);
-    const diff = Math.floor((now.getTime() - posted.getTime()) / 1000);
+  // ---------------- CLICK ----------------
+  const handleClick = async () => {
+    const url = `/products/${product.category?.slug || 'cat'}/${
+      product.subcategory?.slug || 'subcat'
+    }/${product.slug}`;
 
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    try {
+      await fetch(`/api/ads/${product.slug}/view`, { method: 'POST' });
+    } catch {}
+
+    router.push(url);
   };
 
   return (
     <>
-      <Card
-        className="h-100 shadow-sm border rounded-4 product-card"
-        style={{
-          cursor: 'pointer',
-          overflow: 'hidden',
-          transition: 'transform 0.3s, box-shadow 0.3s',
-        }}
-        onClick={handleClick}
-      >
+      <Card className="product-card border-0 shadow-sm rounded-4" onClick={handleClick}>
         {/* IMAGE */}
-        {firstImage ? (
-          <Card.Img
-            variant="top"
-            src={firstImage}
-            alt={product.name}
-            className="product-img"
-            draggable={false}
-          />
-        ) : (
-          <div className="product-img no-image">
-            <span>No Image</span>
-          </div>
-        )}
+        <div className="image-wrapper">
+          {image ? (
+            <img src={image} alt={product.name} className="product-image" />
+          ) : (
+            <div className="no-image">No Image</div>
+          )}
 
-        <Card.Body className="d-flex flex-column p-3">
+          {/* BADGE */}
+          {isWholesale && (
+            <Badge className="wholesale-badge">Wholesale</Badge>
+          )}
+        </div>
+
+        {/* BODY */}
+        <Card.Body className="p-3 d-flex flex-column">
           {/* NAME */}
-          <Card.Title
-            className="text-truncate mb-2"
-            title={product.name}
-            style={{ fontWeight: 600, fontSize: '1rem' }}
-          >
-            {product.name}
-          </Card.Title>
+          <h6 className="product-title">{product.name}</h6>
 
-           {/* PRICE */}
-<div
-  className="mb-2 d-flex align-items-center flex-wrap"
-  style={{
-    fontWeight: 700,
-    color: '#198754',
-    fontSize: '1.1rem',
-  }}
->
-  Tsh {displayPrice.toLocaleString()}
-
-  {/* 🔥 Wholesale badge */}
-  {isWholesale && (
-    <span
-      style={{
-        fontSize: '0.7rem',
-        background: '#ffc107',
-        padding: '2px 6px',
-        borderRadius: '4px',
-        marginLeft: '6px',
-        fontWeight: 600,
-      }}
-    >
-      Wholesale
-    </span>
-  )}
-</div>
+          {/* PRICE */}
+          <div className="price">
+            Tsh {price.toLocaleString()}
+          </div>
 
           {/* FOOTER */}
-          <div
-            className="mt-auto d-flex justify-content-between align-items-center text-muted"
-            style={{ fontSize: '0.85rem' }}
-          >
-            <span>
-              📍 {product.location || 'Dar es Salaam'}
+          <div className="meta">
+            <span className="location">
+              📍 {product.location || 'Unknown'}
+              {product.district?.name && ` • ${product.district.name}`}
             </span>
 
-            {product.postedTime && (
-              <small>{getTimeAgo(product.postedTime)}</small>
-            )}
+            <span className="time">
+              {timeAgo(product.created_at)} ago
+            </span>
           </div>
         </Card.Body>
       </Card>
 
-      {/* STYLES */}
+      {/* STYLE */}
       <style jsx>{`
+        .product-card {
+          cursor: pointer;
+          transition: all 0.25s ease;
+          overflow: hidden;
+          background: #fff;
+        }
+
         .product-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+          transform: translateY(-6px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
         }
 
-        .product-img {
+        .image-wrapper {
+          position: relative;
+          height: 220px;
+          overflow: hidden;
+          background: #f8f9fa;
+        }
+
+        .product-image {
           width: 100%;
-          height: 260px;
+          height: 100%;
           object-fit: cover;
-          transition: transform 0.3s;
+          transition: transform 0.3s ease;
         }
 
-        .product-card:hover .product-img {
-          transform: scale(1.05);
-        }
-
-        @media (max-width: 576px) {
-          .product-img {
-            height: 180px;
-          }
+        .product-card:hover .product-image {
+          transform: scale(1.08);
         }
 
         .no-image {
+          height: 100%;
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: #e9ecef;
-          color: #6c757d;
+          color: #999;
           font-weight: 500;
+        }
+
+        .wholesale-badge {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          background: #ffc107;
+          color: #000;
+          font-size: 11px;
+          padding: 4px 8px;
+          border-radius: 6px;
+        }
+
+        .product-title {
+          font-size: 15px;
+          font-weight: 600;
+          margin-bottom: 6px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .price {
+          font-size: 16px;
+          font-weight: 700;
+          color: #198754;
+          margin-bottom: 10px;
+        }
+
+        .meta {
+          margin-top: auto;
+          display: flex;
+          justify-content: space-between;
+          font-size: 12px;
+          color: #6c757d;
+        }
+
+        .location {
+          max-width: 70%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .time {
+          white-space: nowrap;
+        }
+
+        @media (max-width: 576px) {
+          .image-wrapper {
+            height: 170px;
+          }
         }
       `}</style>
     </>

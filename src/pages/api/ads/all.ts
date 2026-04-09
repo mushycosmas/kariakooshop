@@ -1,4 +1,3 @@
-// pages/api/ads/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { db } from "../../../lib/db";
 
@@ -45,12 +44,14 @@ export default async function handler(
         c.name AS category_name, c.slug AS category_slug,
         u.id AS user_id, u.name AS user_name, u.email AS user_email, u.avatar_url, u.phone AS user_phone,
         r.id AS region_id, r.name AS region_name,
+        d.id AS district_id, d.name AS district_name,
         cn.id AS country_id, cn.name AS country_name
       FROM ads a
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
       JOIN users u ON u.id = a.user_id
       LEFT JOIN regions r ON r.id = a.region_id
+      LEFT JOIN districts d ON d.id = a.district_id
       LEFT JOIN countries cn ON cn.id = r.country_id
       ${whereSQL}
       ORDER BY a.created_at DESC
@@ -120,8 +121,9 @@ export default async function handler(
         avatar_url: ad.avatar_url,
       },
 
-      // REGION & COUNTRY
+      // REGION, DISTRICT & COUNTRY
       region: ad.region_id ? { id: ad.region_id, name: ad.region_name } : null,
+      district: ad.district_id ? { id: ad.district_id, name: ad.district_name } : null,
       country: ad.country_id ? { id: ad.country_id, name: ad.country_name } : null,
     }));
 
@@ -133,13 +135,13 @@ export default async function handler(
       JOIN categories c ON c.id = s.category_id
       JOIN users u ON u.id = a.user_id
       LEFT JOIN regions r ON r.id = a.region_id
+      LEFT JOIN districts d ON d.id = a.district_id
       LEFT JOIN countries cn ON cn.id = r.country_id
       ${whereSQL}
     `;
     const [countRows] = await db.query(countQuery, params);
     const total = (countRows as any)[0]?.total || 0;
 
-    // ---------------- RESPONSE ----------------
     return res.status(200).json({ products: adsWithDetails, total });
 
   } catch (error) {

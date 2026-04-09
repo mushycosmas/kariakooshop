@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const connection = await db.getConnection();
 
-    // 🔥 MAIN PRODUCT
+    // ---------------- MAIN PRODUCT ----------------
     const [ads] = await connection.query(
       `
       SELECT 
@@ -42,11 +42,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         u.name AS user_name,
         u.email AS user_email,
         u.avatar_url,
-        u.phone AS user_phone
+        u.phone AS user_phone,
+        d.id AS district_id,
+        d.name AS district_name,
+        r.id AS region_id,
+        r.name AS region_name
       FROM ads a
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
       JOIN users u ON u.id = a.user_id
+      LEFT JOIN districts d ON d.id = a.district_id
+      LEFT JOIN regions r ON r.id = a.region_id
       WHERE a.slug = ?
       LIMIT 1
     `,
@@ -60,13 +66,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const ad = (ads as any[])[0];
 
-    // 🔥 IMAGES
+    // ---------------- IMAGES ----------------
     const [images] = await connection.query<Image[]>(
       `SELECT * FROM ad_images WHERE ad_id = ?`,
       [ad.id]
     );
 
-    // 🔥 WHOLESALE TIERS
+    // ---------------- WHOLESALE ----------------
     const [tiers] = await connection.query<WholesaleTier[]>(
       `SELECT * FROM ad_wholesale_tiers WHERE ad_id = ? ORDER BY min_qty ASC`,
       [ad.id]
@@ -74,16 +80,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     connection.release();
 
-    // 🔥 RESPONSE
+    // ---------------- RESPONSE ----------------
     const result = {
       id: ad.id,
       slug: ad.slug,
 
-      // BASIC
+      // BASIC INFO
       name: ad.name,
       description: ad.product_description,
       location: ad.location,
       status: ad.status,
+
+      // LOCATION STRUCTURE
+      district: ad.district_id
+        ? { id: ad.district_id, name: ad.district_name }
+        : null,
+
+      region: ad.region_id
+        ? { id: ad.region_id, name: ad.region_name }
+        : null,
 
       // PRICING
       price: ad.price,
