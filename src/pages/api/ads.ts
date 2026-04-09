@@ -10,15 +10,13 @@ export const config = {
   api: { bodyParser: false },
 };
 
-// 🔥 Parse form
+// Parse form
 function parseForm(
   req: NextApiRequest
 ): Promise<{ fields: formidable.Fields; files: formidable.Files }> {
   const uploadDir = path.join(process.cwd(), 'public/uploads');
 
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
   const form = formidable({
     multiples: true,
@@ -50,25 +48,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 🔥 Basic fields
+    // Basic fields
     const name = toStringField(fields.name).trim();
     const product_description = toStringField(fields.product_description).trim();
     const subcategory_id = parseInt(toStringField(fields.subcategory_id), 10);
     const location = toStringField(fields.location).trim();
+    const district_id = parseInt(toStringField(fields.district_id), 10);
     const user_id = parseInt(toStringField(fields.user_id), 10);
     const status = toStringField(fields.status) || 'active';
 
-    // 🔥 Base price from frontend
+    // Base price
     const base_price = parseFloat(toStringField(fields.price)) || 0;
 
-    // 🔥 Wholesale tiers
+    // Wholesale tiers
     const wholesaleTiersRaw = toStringField(fields.wholesale_tiers);
-
-    let wholesaleTiers: {
-      min_qty: number;
-      max_qty: number;
-      whole_seller_price: number;
-    }[] = [];
+    let wholesaleTiers: { min_qty: number; max_qty: number; whole_seller_price: number }[] = [];
 
     if (wholesaleTiersRaw) {
       try {
@@ -82,22 +76,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // 🔥 Determine final price
-    const tierPrices = wholesaleTiers
-      .map((t) => t.whole_seller_price)
-      .filter((p) => !isNaN(p) && p > 0);
-
-    const finalPrice =base_price;
-
-    // 🔥 Validation
+    // Validation
     const missingFields: string[] = [];
-
     if (!name) missingFields.push('name');
     if (!product_description) missingFields.push('product_description');
-    if (!finalPrice) missingFields.push('price');
+    if (!base_price) missingFields.push('price');
     if (!subcategory_id) missingFields.push('subcategory_id');
     if (!user_id) missingFields.push('user_id');
     if (!location) missingFields.push('location');
+    if (!district_id) missingFields.push('district_id');
 
     if (missingFields.length > 0) {
       await connection.rollback();
@@ -108,52 +95,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // 🔥 Slug
-    const slug =
-      name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+    // Slug
+    const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
-    // 🔥 Insert main ad (NO retail_price anymore)
+    // Insert main ad (now includes district_id)
     const [result] = await connection.execute(
       `INSERT INTO ads 
-      (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        user_id,
-        user_id,
-        subcategory_id,
-        name,
-        slug,
-        product_description,
-        status,
-        finalPrice,
-        location,
-      ]
+      (user_id, seller_id, subcategory_id, name, slug, product_description, status, price, location, district_id) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [user_id, user_id, subcategory_id, name, slug, product_description, status, base_price, location, district_id]
     );
 
     const adId = (result as any).insertId;
 
-    // 🔥 Insert wholesale tiers
+    // Insert wholesale tiers
     for (const tier of wholesaleTiers) {
-      if (
-        tier.min_qty > 0 &&
-        tier.max_qty >= tier.min_qty &&
-        tier.whole_seller_price > 0
-      ) {
+      if (tier.min_qty > 0 && tier.max_qty >= tier.min_qty && tier.whole_seller_price > 0) {
         await connection.execute(
           `INSERT INTO ad_wholesale_tiers 
           (ad_id, min_qty, max_qty, whole_seller_price) 
           VALUES (?, ?, ?, ?)`,
-          [
-            adId,
-            tier.min_qty,
-            tier.max_qty,
-            tier.whole_seller_price,
-          ]
+          [adId, tier.min_qty, tier.max_qty, tier.whole_seller_price]
         );
       }
     }
 
-    // 🔥 Save images
+    // Save images
     const imageFiles = Array.isArray(files['images[]'])
       ? (files['images[]'] as File[])
       : files['images[]']
@@ -162,7 +129,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const file of imageFiles) {
       const relativePath = `/uploads/${path.basename(file.filepath)}`;
-
       await connection.execute(
         `INSERT INTO ad_images (ad_id, path) VALUES (?, ?)`,
         [adId, relativePath]
@@ -176,15 +142,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message: 'Ad saved successfully!',
       ad_id: adId,
     });
-
   } catch (error: any) {
     console.error('Error caught:', error);
-
     if (connection) {
       await connection.rollback();
       connection.release();
     }
-
     return res.status(500).json({
       message: 'Internal server error',
       error: error?.sqlMessage || error?.message || String(error),

@@ -1,0 +1,395 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Form,
+  Button,
+  Col,
+  Row,
+  Alert,
+  Image,
+  Card,
+} from 'react-bootstrap';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { useSession } from 'next-auth/react';
+import imageCompression from 'browser-image-compression';
+import { useLocations } from '@/hooks/useLocations';
+
+interface Category {
+  id: string;
+  name: string;
+  subcategories: { id: string; name: string }[];
+}
+
+const SimpleAdsForm = () => {
+  const { data: session } = useSession();
+  const { countries } = useLocations();
+
+  // ---------------- LOCATION ----------------
+  const regions = countries.find(c => c.code === 'TZ')?.regions || [];
+  const [districts, setDistricts] = useState<any[]>([]);
+
+  // ---------------- FORM ----------------
+  const [form, setForm] = useState({
+    name: '',
+    price: '',
+    min_order_qty: '',
+    wholesale_tiers: [{ min_qty: 1, max_qty: 5, whole_seller_price: '' }],
+    product_description: '',
+    category_id: '',
+    subcategory_id: '',
+    region_id: '', // only for filtering districts, not saved
+    district_id: '',
+    location: '',
+    user_id: '',
+  });
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [images, setImages] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [message, setMessage] = useState('');
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+
+  // ---------------- EDITOR ----------------
+  const editor = useEditor({
+    extensions: [StarterKit],
+    editorProps: {
+      attributes: {
+        class: 'form-control rounded-3',
+        style: 'min-height:150px;',
+      },
+    },
+    onUpdate: ({ editor }) => {
+      setForm(prev => ({
+        ...prev,
+        product_description: editor.getHTML(),
+      }));
+    },
+  });
+
+  // ---------------- EFFECTS ----------------
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      setForm(prev => ({
+        ...prev,
+        user_id: String(session.user.id),
+      }));
+    }
+  }, [session]);
+
+  useEffect(() => {
+    fetch('/api/all_categories')
+      .then(res => res.json())
+      .then(setCategories)
+      .catch(() => setMessage('Failed to load categories'));
+  }, []);
+
+  useEffect(() => {
+    const cat = categories.find(c => c.id === form.category_id);
+    setSubcategories(cat ? cat.subcategories : []);
+  }, [form.category_id, categories]);
+
+  useEffect(() => {
+    const selected = regions.find(r => r.id === form.region_id);
+    setDistricts(selected ? selected.districts : []);
+  }, [form.region_id, regions]);
+
+  // ---------------- HANDLERS ----------------
+
+  const handleChange = (e: any) => {
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'region_id' && { district_id: '' }), // reset district when region changes
+    }));
+  };
+
+  // WHOLESALE
+  const addTier = () => {
+    setForm(prev => ({
+      ...prev,
+      wholesale_tiers: [
+        ...prev.wholesale_tiers,
+        { min_qty: 1, max_qty: 5, whole_seller_price: '' },
+      ],
+    }));
+  };
+
+  const updateTier = (i: number, field: string, value: string) => {
+    const updated = [...form.wholesale_tiers];
+    updated[i] = {
+      ...updated[i],
+      [field]: field === 'whole_seller_price' ? value : Number(value),
+    };
+    setForm(prev => ({ ...prev, wholesale_tiers: updated }));
+  };
+
+  const removeTier = (i: number) => {
+    setForm(prev => ({
+      ...prev,
+      wholesale_tiers: prev.wholesale_tiers.filter((_, idx) => idx !== i),
+    }));
+  };
+
+  // IMAGES
+  const handleImageChange = async (e: any) => {
+    const files = Array.from(e.target.files || []);
+    const compressed: File[] = [];
+
+    for (const file of files) {
+      try {
+        const c = await imageCompression(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1024,
+        });
+        compressed.push(c);
+      } catch {
+        compressed.push(file);
+      }
+    }
+
+    setImages(prev => [...prev, ...compressed]);
+    setPreviewUrls(prev => [
+      ...prev,
+      ...compressed.map(f => URL.createObjectURL(f)),
+    ]);
+  };
+
+  const removeImage = (i: number) => {
+    setImages(prev => prev.filter((_, idx) => idx !== i));
+    setPreviewUrls(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  // ---------------- SUBMIT ----------------
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+
+    if (
+      !form.name ||
+      !form.category_id ||
+      !form.subcategory_id ||
+      !form.district_id || // only district required
+      !form.location
+    ) {
+      setMessage('Please fill all required fields');
+      return;
+    }
+
+    if (images.length === 0) {
+      setMessage('Please upload at least one image');
+      return;
+    }
+
+    try {
+      setLoadingSubmit(true);
+
+      const data = new FormData();
+
+      Object.entries(form).forEach(([key, value]) => {
+        // Only exclude wholesale_tiers and region_id, everything else goes
+        if (key !== 'wholesale_tiers' && key !== 'region_id') {
+          data.append(key, value as string);
+        }
+      });
+
+      data.append('wholesale_tiers', JSON.stringify(form.wholesale_tiers));
+      images.forEach(img => data.append('images[]', img));
+
+      const res = await fetch('/api/ads', {
+        method: 'POST',
+        body: data,
+      });
+
+      if (!res.ok) throw new Error('Failed to submit');
+
+      const result = await res.json();
+      setMessage(result.message || 'Product posted successfully');
+
+      // RESET FORM
+      setForm({
+        name: '',
+        price: '',
+        min_order_qty: '',
+        wholesale_tiers: [{ min_qty: 1, max_qty: 5, whole_seller_price: '' }],
+        product_description: '',
+        category_id: '',
+        subcategory_id: '',
+        region_id: '',
+        district_id: '',
+        location: '',
+        user_id: form.user_id,
+      });
+
+      setImages([]);
+      setPreviewUrls([]);
+      editor?.commands.setContent('');
+
+    } catch (err) {
+      console.error(err);
+      setMessage('Error submitting product');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
+
+  // ---------------- UI ----------------
+
+  return (
+    <div className="container py-5" style={{ maxWidth: 950 }}>
+      <h3 className="fw-bold mb-4">📦 Post Product</h3>
+
+      {message && <Alert variant="info">{message}</Alert>}
+
+      <Form onSubmit={handleSubmit}>
+
+        {/* BASIC */}
+        <Card className="mb-4 shadow-sm rounded-4 border-0">
+          <Card.Body>
+            <h5>Basic Info</h5>
+
+            <Row className="g-3">
+              <Col md={6}>
+                <Form.Control placeholder="Product Name" name="name" value={form.name} onChange={handleChange} />
+              </Col>
+
+              <Col md={3}>
+                <Form.Control type="number" placeholder="Price" name="price" value={form.price} onChange={handleChange} />
+              </Col>
+
+              <Col md={3}>
+                <Form.Control type="number" placeholder="Min Qty" name="min_order_qty" value={form.min_order_qty} onChange={handleChange} />
+              </Col>
+            </Row>
+
+            <Row className="mt-3 g-3">
+              <Col md={6}>
+                <Form.Select name="category_id" value={form.category_id} onChange={handleChange}>
+                  <option value="">Category</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+
+              <Col md={6}>
+                <Form.Select name="subcategory_id" value={form.subcategory_id} onChange={handleChange}>
+                  <option value="">Subcategory</option>
+                  {subcategories.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+            </Row>
+
+            {/* LOCATION */}
+            <Row className="mt-3 g-3">
+              <Col md={4}>
+                <Form.Select
+                  name="region_id"
+                  value={form.region_id}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Region</option>
+                  {regions.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+
+              <Col md={4}>
+                <Form.Select
+                  name="district_id"
+                  value={form.district_id}
+                  onChange={handleChange}
+                  disabled={!form.region_id}
+                >
+                  <option value="">Select District</option>
+                  {districts.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </Form.Select>
+              </Col>
+
+              <Col md={4}>
+                <Form.Control
+                  placeholder="Area (e.g. Kariakoo)"
+                  name="location"
+                  value={form.location}
+                  onChange={handleChange}
+                />
+              </Col>
+            </Row>
+
+          </Card.Body>
+        </Card>
+
+        {/* WHOLESALE */}
+        <Card className="mb-4 shadow-sm rounded-4 border-0">
+          <Card.Body>
+            <h5>Wholesale Pricing</h5>
+
+            {form.wholesale_tiers.map((tier, i) => (
+              <Row key={i} className="g-2 mt-2">
+                <Col md={3}>
+                  <Form.Control placeholder="Min Qty" value={tier.min_qty} onChange={(e) => updateTier(i, 'min_qty', e.target.value)} />
+                </Col>
+
+                <Col md={3}>
+                  <Form.Control placeholder="Max Qty" value={tier.max_qty} onChange={(e) => updateTier(i, 'max_qty', e.target.value)} />
+                </Col>
+
+                <Col md={4}>
+                  <Form.Control placeholder="Wholesale Price" value={tier.whole_seller_price} onChange={(e) => updateTier(i, 'whole_seller_price', e.target.value)} />
+                </Col>
+
+                <Col md={2}>
+                  <Button variant="danger" onClick={() => removeTier(i)}>×</Button>
+                </Col>
+              </Row>
+            ))}
+
+            <Button size="sm" className="mt-2" onClick={addTier}>+ Add Tier</Button>
+          </Card.Body>
+        </Card>
+
+        {/* DESCRIPTION */}
+        <Card className="mb-4 shadow-sm rounded-4 border-0">
+          <Card.Body>
+            <h5>Description</h5>
+            <EditorContent editor={editor} />
+          </Card.Body>
+        </Card>
+
+        {/* IMAGES */}
+        <Card className="mb-4 shadow-sm rounded-4 border-0">
+          <Card.Body>
+            <h5>Images</h5>
+
+            <Form.Control type="file" multiple onChange={handleImageChange} />
+
+            <div className="d-flex flex-wrap gap-3 mt-3">
+              {previewUrls.map((url, i) => (
+                <div key={i} className="position-relative">
+                  <Image src={url} width={110} height={110} className="rounded-3 border" />
+                  <Button size="sm" variant="danger" className="position-absolute top-0 end-0" onClick={() => removeImage(i)}>×</Button>
+                </div>
+              ))}
+            </div>
+          </Card.Body>
+        </Card>
+
+        <Button type="submit" className="w-100 py-3 fw-bold" disabled={loadingSubmit}>
+          {loadingSubmit ? 'Posting...' : '🚀 Post Product'}
+        </Button>
+
+      </Form>
+    </div>
+  );
+};
+
+export default SimpleAdsForm;
