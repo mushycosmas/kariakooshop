@@ -5,7 +5,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { page = "1", pageSize = "12", search = "", subcategory_id = "" } = req.query;
+  const { page = "1", pageSize = "12", search = "", subcategory_id = "" } =
+    req.query;
 
   const pageNum = parseInt(page as string, 10);
   const sizeNum = parseInt(pageSize as string, 10);
@@ -19,7 +20,7 @@ export default async function handler(
     let whereClauses: string[] = [];
     let params: any[] = [];
 
-    // ---------------- SEARCH ----------------
+    // SEARCH
     if (search) {
       const words = (search as string).trim().split(/\s+/);
       words.forEach((word) => {
@@ -28,31 +29,37 @@ export default async function handler(
       });
     }
 
-    // ---------------- SUBCATEGORY FILTER ----------------
+    // SUBCATEGORY
     if (subcategory_id && subcategory_id !== "All") {
       whereClauses.push("a.subcategory_id = ?");
       params.push(subcategory_id);
     }
 
-    const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+    const whereSQL =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-    // ---------------- MAIN QUERY ----------------
+    // MAIN QUERY (FIXED)
     const adQuery = `
       SELECT 
-        a.*, 
+        a.*,
         s.name AS subcategory_name, s.slug AS subcategory_slug,
         c.name AS category_name, c.slug AS category_slug,
         u.id AS user_id, u.name AS user_name, u.email AS user_email, u.avatar_url, u.phone AS user_phone,
-        r.id AS region_id, r.name AS region_name,
+
         d.id AS district_id, d.name AS district_name,
+        r.id AS region_id, r.name AS region_name,
         cn.id AS country_id, cn.name AS country_name
+
       FROM ads a
+
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
       JOIN users u ON u.id = a.user_id
-      LEFT JOIN regions r ON r.id = a.region_id
+
       LEFT JOIN districts d ON d.id = a.district_id
+      LEFT JOIN regions r ON r.id = d.region_id
       LEFT JOIN countries cn ON cn.id = r.country_id
+
       ${whereSQL}
       ORDER BY a.created_at DESC
       LIMIT ? OFFSET ?
@@ -68,31 +75,35 @@ export default async function handler(
 
     const adIds = adList.map((ad) => ad.id);
 
-    // ---------------- IMAGES ----------------
+    // IMAGES
     const [images] = await db.query(
-      `SELECT * FROM ad_images WHERE ad_id IN (${adIds.map(() => "?").join(",")})`,
+      `SELECT * FROM ad_images WHERE ad_id IN (${adIds
+        .map(() => "?")
+        .join(",")})`,
       adIds
     );
+
     const imagesByAd: Record<number, any[]> = {};
     (images as any[]).forEach((img) => {
       if (!imagesByAd[img.ad_id]) imagesByAd[img.ad_id] = [];
       imagesByAd[img.ad_id].push(img);
     });
 
-    // ---------------- WHOLESALE ----------------
+    // WHOLESALE
     const [tiers] = await db.query(
       `SELECT * FROM ad_wholesale_tiers 
        WHERE ad_id IN (${adIds.map(() => "?").join(",")})
        ORDER BY min_qty ASC`,
       adIds
     );
+
     const tiersByAd: Record<number, any[]> = {};
     (tiers as any[]).forEach((tier) => {
       if (!tiersByAd[tier.ad_id]) tiersByAd[tier.ad_id] = [];
       tiersByAd[tier.ad_id].push(tier);
     });
 
-    // ---------------- FINAL FORMAT ----------------
+    // FINAL RESPONSE
     const adsWithDetails = adList.map((ad) => ({
       id: ad.id,
       slug: ad.slug,
@@ -103,16 +114,22 @@ export default async function handler(
       price: ad.price,
       retail_price: ad.retail_price || null,
       min_order_qty: ad.min_order_qty || null,
-      wholesale_tiers: tiersByAd[ad.id] || [],
       viewed: ad.viewed || 0,
       created_at: ad.created_at,
+
       images: imagesByAd[ad.id] || [],
+      wholesale_tiers: tiersByAd[ad.id] || [],
 
-      // CATEGORY
-      category: { name: ad.category_name, slug: ad.category_slug },
-      subcategory: { name: ad.subcategory_name, slug: ad.subcategory_slug },
+      category: {
+        name: ad.category_name,
+        slug: ad.category_slug,
+      },
 
-      // USER
+      subcategory: {
+        name: ad.subcategory_name,
+        slug: ad.subcategory_slug,
+      },
+
       user: {
         id: ad.user_id,
         name: ad.user_name,
@@ -121,29 +138,43 @@ export default async function handler(
         avatar_url: ad.avatar_url,
       },
 
-      // REGION, DISTRICT & COUNTRY
-      region: ad.region_id ? { id: ad.region_id, name: ad.region_name } : null,
-      district: ad.district_id ? { id: ad.district_id, name: ad.district_name } : null,
-      country: ad.country_id ? { id: ad.country_id, name: ad.country_name } : null,
+      // FIXED LOCATION STRUCTURE
+      district: ad.district_id
+        ? { id: ad.district_id, name: ad.district_name }
+        : null,
+
+      region: ad.region_id
+        ? { id: ad.region_id, name: ad.region_name }
+        : null,
+
+      country: ad.country_id
+        ? { id: ad.country_id, name: ad.country_name }
+        : null,
     }));
 
-    // ---------------- COUNT QUERY ----------------
+    // COUNT QUERY (FIXED JOIN PATH)
     const countQuery = `
       SELECT COUNT(*) as total
       FROM ads a
+
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
       JOIN users u ON u.id = a.user_id
-      LEFT JOIN regions r ON r.id = a.region_id
+
       LEFT JOIN districts d ON d.id = a.district_id
+      LEFT JOIN regions r ON r.id = d.region_id
       LEFT JOIN countries cn ON cn.id = r.country_id
+
       ${whereSQL}
     `;
+
     const [countRows] = await db.query(countQuery, params);
     const total = (countRows as any)[0]?.total || 0;
 
-    return res.status(200).json({ products: adsWithDetails, total });
-
+    return res.status(200).json({
+      products: adsWithDetails,
+      total,
+    });
   } catch (error) {
     console.error("API error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
