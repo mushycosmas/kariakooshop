@@ -9,28 +9,10 @@ import SellerDashboardLayout from '@/components/SellerDashboardLayout';
 import imageCompression from 'browser-image-compression';
 import { useLocations } from '@/hooks/useLocations';
 
-/* ================= TYPES ================= */
-
-interface District {
-  id: string | number;
-  name: string;
-}
-
-interface Region {
-  id: string | number;
-  name: string;
-  districts?: District[];
-}
-
-interface Subcategory {
-  id: string;
-  name: string;
-}
-
 interface Category {
   id: string;
   name: string;
-  subcategories: Subcategory[];
+  subcategories: { id: string; name: string }[];
 }
 
 interface ProductForm {
@@ -42,15 +24,9 @@ interface ProductForm {
   location: string;
   district_id: string;
   status: string;
-  wholesale_tiers: {
-    min_qty: number;
-    max_qty: number;
-    whole_seller_price: string;
-  }[];
+  wholesale_tiers: { min_qty: number; max_qty: number; whole_seller_price: string }[];
   region_id: string;
 }
-
-/* ================= COMPONENT ================= */
 
 const EditProductForm: React.FC = () => {
   const router = useRouter();
@@ -71,9 +47,9 @@ const EditProductForm: React.FC = () => {
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [regions, setRegions] = useState<Region[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [regions, setRegions] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -84,12 +60,10 @@ const EditProductForm: React.FC = () => {
   const editor = useEditor({
     extensions: [StarterKit],
     editorProps: { attributes: { class: 'form-control', style: 'min-height:150px;' } },
-    onUpdate: ({ editor }) =>
-      setForm(prev => ({ ...prev, product_description: editor.getHTML() })),
+    onUpdate: ({ editor }) => setForm(prev => ({ ...prev, product_description: editor.getHTML() })),
   });
 
-  /* ================= FETCH DATA ================= */
-
+  // Fetch categories
   useEffect(() => {
     fetch('/api/all_categories')
       .then(res => res.json())
@@ -97,11 +71,13 @@ const EditProductForm: React.FC = () => {
       .catch(() => setMessage('Failed to load categories'));
   }, []);
 
+  // Load regions from country
   useEffect(() => {
     const country = countries.find(c => c.name === 'Tanzania');
     setRegions(country?.regions || []);
   }, [countries]);
 
+  // Fetch product data
   useEffect(() => {
     if (!id || regions.length === 0) return;
 
@@ -109,15 +85,14 @@ const EditProductForm: React.FC = () => {
       setLoading(true);
       try {
         const res = await fetch(`/api/seller/products/${id}`);
-        if (!res.ok) throw new Error('Failed');
-
+        if (!res.ok) throw new Error('Failed to fetch product');
         const data = await res.json();
 
+        // Determine region based on district
         let regionId = '';
         for (const region of regions) {
           const foundDistrict = region.districts?.find(
-            (d: District) =>
-              String(d.id) === String(data.product.district_id)
+            (d: any) => String(d.id) === String(data.product.district_id)
           );
           if (foundDistrict) {
             regionId = String(region.id);
@@ -134,16 +109,14 @@ const EditProductForm: React.FC = () => {
           location: data.product.location || '',
           district_id: String(data.product.district_id || ''),
           status: data.product.status || 'active',
-          wholesale_tiers:
-            data.wholesale_tiers || [
-              { min_qty: 1, max_qty: 5, whole_seller_price: '' },
-            ],
+          wholesale_tiers: data.wholesale_tiers || [{ min_qty: 1, max_qty: 5, whole_seller_price: '' }],
           region_id: regionId,
         });
 
         setExistingImages(data.images || []);
         editor?.commands.setContent(data.product.product_description || '');
-      } catch {
+      } catch (error) {
+        console.error(error);
         setMessage('Error loading product data');
       } finally {
         setLoading(false);
@@ -153,77 +126,55 @@ const EditProductForm: React.FC = () => {
     fetchProduct();
   }, [id, regions, editor]);
 
-  /* ================= DEPENDENT DROPDOWNS ================= */
-
+  // Update districts when region changes
   useEffect(() => {
-    const selectedRegion = regions.find(
-      (r: Region) => String(r.id) === String(form.region_id)
-    );
-
+    const selectedRegion = regions.find(r => String(r.id) === String(form.region_id));
     setDistricts(selectedRegion?.districts || []);
-
-    if (
-      !selectedRegion?.districts?.some(
-        (d: District) => String(d.id) === String(form.district_id)
-      )
-    ) {
+    // If current district doesn't belong to selected region, reset it
+    if (!selectedRegion?.districts?.some(d => String(d.id) === String(form.district_id))) {
       setForm(prev => ({ ...prev, district_id: '' }));
     }
   }, [form.region_id, regions]);
 
+  // Update subcategories when category changes
   useEffect(() => {
     const cat = categories.find(c => c.id === form.category_id);
     setSubcategories(cat ? cat.subcategories : []);
-
     if (!cat?.subcategories?.some(s => s.id === form.subcategory_id)) {
       setForm(prev => ({ ...prev, subcategory_id: '' }));
     }
   }, [form.category_id, categories]);
 
-  /* ================= HANDLERS ================= */
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
+  // Handle form input change
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const addTier = () =>
-    setForm(prev => ({
-      ...prev,
-      wholesale_tiers: [
-        ...prev.wholesale_tiers,
-        { min_qty: 1, max_qty: 5, whole_seller_price: '' },
-      ],
-    }));
+  // Wholesale tiers
+  const addTier = () => setForm(prev => ({
+    ...prev,
+    wholesale_tiers: [...prev.wholesale_tiers, { min_qty: 1, max_qty: 5, whole_seller_price: '' }]
+  }));
 
-  const updateTier = (
-    index: number,
-    field: 'min_qty' | 'max_qty' | 'whole_seller_price',
-    value: string
-  ) => {
+  const updateTier = (index: number, field: 'min_qty' | 'max_qty' | 'whole_seller_price', value: string) => {
     setForm(prev => {
       const updated = [...prev.wholesale_tiers];
-      updated[index] = {
-        ...updated[index],
-        [field]: field === 'whole_seller_price' ? value : Number(value) || 0,
+      updated[index] = { 
+        ...updated[index], 
+        [field]: field === 'whole_seller_price' ? value : Number(value) || 0 
       };
       return { ...prev, wholesale_tiers: updated };
     });
   };
 
-  const removeTier = (index: number) =>
-    setForm(prev => ({
-      ...prev,
-      wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index),
-    }));
+  const removeTier = (index: number) => setForm(prev => ({
+    ...prev,
+    wholesale_tiers: prev.wholesale_tiers.filter((_, i) => i !== index)
+  }));
 
-  /* ================= IMAGES ================= */
-
-  const handleImageChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  // Image handlers
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
@@ -232,10 +183,7 @@ const EditProductForm: React.FC = () => {
 
     for (const file of Array.from(files)) {
       try {
-        const compressed = await imageCompression(file, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-        });
+        const compressed = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1024 });
         compressedFiles.push(compressed);
         previewList.push(URL.createObjectURL(compressed));
       } catch {
@@ -249,14 +197,9 @@ const EditProductForm: React.FC = () => {
     e.target.value = '';
   };
 
-  useEffect(
-    () => () => previewUrls.forEach(url => URL.revokeObjectURL(url)),
-    [previewUrls]
-  );
+  useEffect(() => () => previewUrls.forEach(url => URL.revokeObjectURL(url)), [previewUrls]);
 
-  const removeExistingImage = (url: string) =>
-    setExistingImages(prev => prev.filter(u => u !== url));
-
+  const removeExistingImage = (url: string) => setExistingImages(prev => prev.filter(u => u !== url));
   const removeNewImage = (index: number) => {
     setNewImages(prev => prev.filter((_, i) => i !== index));
     setPreviewUrls(prev => {
@@ -265,74 +208,46 @@ const EditProductForm: React.FC = () => {
     });
   };
 
-  /* ================= SUBMIT ================= */
-
+  // Form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (
-      !form.name ||
-      !form.category_id ||
-      !form.subcategory_id ||
-      !form.district_id ||
-      !form.location
-    ) {
+    if (!form.name || !form.category_id || !form.subcategory_id || !form.district_id || !form.location) {
       setMessage('Please fill all required fields.');
       return;
     }
 
     setSubmitting(true);
+    setMessage('');
 
     try {
       const formData = new FormData();
-
       Object.entries(form).forEach(([key, value]) => {
         if (key !== 'wholesale_tiers' && key !== 'region_id') {
           formData.append(key, value as string);
         }
       });
+      formData.append('wholesale_tiers', JSON.stringify(form.wholesale_tiers));
+      existingImages.forEach(url => formData.append('existingImages[]', url));
+      newImages.forEach(file => formData.append('newImages[]', file));
 
-      formData.append(
-        'wholesale_tiers',
-        JSON.stringify(form.wholesale_tiers)
-      );
-
-      existingImages.forEach(url =>
-        formData.append('existingImages[]', url)
-      );
-      newImages.forEach(file =>
-        formData.append('newImages[]', file)
-      );
-
-      const res = await fetch(`/api/seller/products/${id}`, {
-        method: 'PUT',
-        body: formData,
-      });
-
+      const res = await fetch(`/api/seller/products/${id}`, { method: 'PUT', body: formData });
       const result = await res.json();
 
       if (res.ok) {
-        setMessage('Product updated successfully!');
+        setMessage(result.message || 'Product updated successfully!');
         setTimeout(() => router.push('/seller/product-list'), 1500);
       } else {
-        setMessage(result.message || 'Update failed');
+        setMessage(result.message || 'Update failed.');
       }
-    } catch {
-      setMessage('Error updating product');
+    } catch (error) {
+      console.error(error);
+      setMessage('An error occurred while updating the product.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  /* ================= UI ================= */
-
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <Spinner animation="border" />
-      </div>
-    );
-  }
+  if (loading) return <div className="text-center py-5"><Spinner animation="border" /></div>;
 
   return (
     <SellerDashboardLayout>
