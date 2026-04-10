@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://nono.co.tz
+
+# Sitemaps
+Sitemap: https://nono.co.tz/sitemap.xml
