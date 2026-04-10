@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, Badge } from 'react-bootstrap';
+import { Card } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 
 export interface ProductImage {
@@ -41,7 +41,6 @@ const ProductCard: React.FC<Props> = ({ product }) => {
   const router = useRouter();
   const image = product.images?.[0]?.path;
 
-  // ---------------- PRICE ----------------
   const getPrice = () => {
     if (product.wholesale_tiers?.length) {
       const prices = product.wholesale_tiers
@@ -54,9 +53,7 @@ const ProductCard: React.FC<Props> = ({ product }) => {
   };
 
   const price = getPrice();
-  const isWholesale = !!product.wholesale_tiers?.length;
 
-  // ---------------- TIME AGO ----------------
   const timeAgo = (date?: string) => {
     if (!date) return '';
 
@@ -71,7 +68,6 @@ const ProductCard: React.FC<Props> = ({ product }) => {
     return `${Math.floor(diff / 2592000)}mo`;
   };
 
-  // ---------------- CLICK ----------------
   const handleClick = async () => {
     const url = `/products/${product.category?.slug || 'cat'}/${
       product.subcategory?.slug || 'subcat'
@@ -86,7 +82,8 @@ const ProductCard: React.FC<Props> = ({ product }) => {
 
   return (
     <>
-      <Card className="product-card border-0 shadow-sm rounded-4" onClick={handleClick}>
+      <Card className="product-card border-0 shadow-sm" onClick={handleClick}>
+        
         {/* IMAGE */}
         <div className="image-wrapper">
           {image ? (
@@ -94,24 +91,14 @@ const ProductCard: React.FC<Props> = ({ product }) => {
           ) : (
             <div className="no-image">No Image</div>
           )}
-
-          {/* BADGE */}
-          {isWholesale && (
-            <Badge className="wholesale-badge">Wholesale</Badge>
-          )}
         </div>
 
-        {/* BODY */}
-        <Card.Body className="p-3 d-flex flex-column">
-          {/* NAME */}
+        {/* CONTENT */}
+        <Card.Body className="content">
           <h6 className="product-title">{product.name}</h6>
 
-          {/* PRICE */}
-          <div className="price">
-            Tsh {price.toLocaleString()}
-          </div>
+          <div className="price">Tsh {price.toLocaleString()}</div>
 
-          {/* FOOTER */}
           <div className="meta">
             <span className="location">
               📍 {product.location || 'Unknown'}
@@ -125,62 +112,33 @@ const ProductCard: React.FC<Props> = ({ product }) => {
         </Card.Body>
       </Card>
 
-      {/* STYLE */}
       <style jsx>{`
         .product-card {
           cursor: pointer;
-          transition: all 0.25s ease;
+          border-radius: 12px;
           overflow: hidden;
           background: #fff;
         }
 
-        .product-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-        }
-
+        /* DESKTOP */
         .image-wrapper {
-          position: relative;
           height: 220px;
-          overflow: hidden;
-          background: #f8f9fa;
+          background: #f6f7f9;
         }
 
         .product-image {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transition: transform 0.3s ease;
         }
 
-        .product-card:hover .product-image {
-          transform: scale(1.08);
-        }
-
-        .no-image {
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #999;
-          font-weight: 500;
-        }
-
-        .wholesale-badge {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          background: #ffc107;
-          color: #000;
-          font-size: 11px;
-          padding: 4px 8px;
-          border-radius: 6px;
+        .content {
+          padding: 12px;
         }
 
         .product-title {
           font-size: 15px;
           font-weight: 600;
-          margin-bottom: 6px;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -190,31 +148,45 @@ const ProductCard: React.FC<Props> = ({ product }) => {
           font-size: 16px;
           font-weight: 700;
           color: #198754;
-          margin-bottom: 10px;
         }
 
         .meta {
-          margin-top: auto;
           display: flex;
           justify-content: space-between;
           font-size: 12px;
           color: #6c757d;
         }
 
-        .location {
-          max-width: 70%;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .time {
-          white-space: nowrap;
-        }
-
+        /* 🔥 MOBILE FULL HEIGHT (JIJI STYLE) */
         @media (max-width: 576px) {
+          .product-card {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            border-radius: 0;
+          }
+
           .image-wrapper {
-            height: 170px;
+            flex: 1;
+            height: 100%;
+          }
+
+          .product-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .content {
+            padding: 12px;
+            background: #fff;
+          }
+
+          .product-title {
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
           }
         }
       `}</style>
