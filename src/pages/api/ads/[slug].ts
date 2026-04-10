@@ -43,16 +43,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         u.email AS user_email,
         u.avatar_url,
         u.phone AS user_phone,
+
         d.id AS district_id,
         d.name AS district_name,
+
         r.id AS region_id,
-        r.name AS region_name
+        r.name AS region_name,
+
+        co.id AS country_id,
+        co.name AS country_name
+
       FROM ads a
       JOIN sub_categories s ON s.id = a.subcategory_id
       JOIN categories c ON c.id = s.category_id
       JOIN users u ON u.id = a.user_id
+
       LEFT JOIN districts d ON d.id = a.district_id
-      LEFT JOIN regions r ON r.id = a.region_id
+      LEFT JOIN regions r ON r.id = d.region_id
+      LEFT JOIN countries co ON co.id = r.country_id
+
       WHERE a.slug = ?
       LIMIT 1
     `,
@@ -92,12 +101,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: ad.status,
 
       // LOCATION STRUCTURE
-      district: ad.district_id
-        ? { id: ad.district_id, name: ad.district_name }
+      country: ad.country_id
+        ? { id: ad.country_id, name: ad.country_name }
         : null,
 
       region: ad.region_id
         ? { id: ad.region_id, name: ad.region_name }
+        : null,
+
+      district: ad.district_id
+        ? { id: ad.district_id, name: ad.district_name }
         : null,
 
       // PRICING
