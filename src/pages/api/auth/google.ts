@@ -31,6 +31,8 @@ export default async function handler(
     const email = googleUser.email;
     const name = googleUser.name || "";
     const image = googleUser.picture || "";
+    
+    console.log("🔥 Google Response:", googleResponse.data);
 
     if (!email) {
       return res.status(400).json({
