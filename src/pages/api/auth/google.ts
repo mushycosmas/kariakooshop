@@ -14,25 +14,31 @@ export default async function handler(
   }
 
   try {
-    const { id_token } = req.body;
+    const { access_token } = req.body;
 
-    if (!id_token) {
+    if (!access_token) {
       return res.status(400).json({
-        message: "ID token is required",
+        message: "Access token is required",
       });
     }
 
+    // ✅ Get user info from Google (CORRECT WAY)
     const googleResponse = await axios.get(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${id_token}`
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }
     );
 
     const googleUser = googleResponse.data;
 
+    console.log("🔥 Google User:", googleUser);
+
     const email = googleUser.email;
     const name = googleUser.name || "";
     const image = googleUser.picture || "";
-    
-    console.log("🔥 Google Response:", googleResponse.data);
 
     if (!email) {
       return res.status(400).json({
@@ -40,6 +46,7 @@ export default async function handler(
       });
     }
 
+    // ✅ Check if user exists
     const [rows]: any = await db.query(
       "SELECT id FROM users WHERE email = ?",
       [email]
@@ -48,9 +55,11 @@ export default async function handler(
     let userId: number;
 
     if (rows.length === 0) {
-      const [firstName, ...lastParts] = name.split(" ");
-      const lastName = lastParts.join(" ");
+      const nameParts = name.split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
 
+      // ✅ Create new user
       const [result]: any = await db.query(
         `INSERT INTO users
         (name, user_type, first_name, last_name, email, avatar_url, created_at, updated_at)
@@ -70,6 +79,7 @@ export default async function handler(
       userId = rows[0].id;
     }
 
+    // ✅ Create JWT token
     const token = jwt.sign(
       {
         id: userId,
@@ -81,6 +91,7 @@ export default async function handler(
       }
     );
 
+    // ✅ Response
     return res.status(200).json({
       token,
       user: {
