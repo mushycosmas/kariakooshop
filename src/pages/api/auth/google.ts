@@ -14,21 +14,16 @@ export default async function handler(
   }
 
   try {
-    const { access_token } = req.body;
+    const { id_token } = req.body;
 
-    if (!access_token) {
+    if (!id_token) {
       return res.status(400).json({
-        message: "Access token is required",
+        message: "ID token is required",
       });
     }
 
     const googleResponse = await axios.get(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${id_token}`
     );
 
     const googleUser = googleResponse.data;
