@@ -34,7 +34,7 @@ export default async function handler(
 
     const googleUser = googleResponse.data;
 
-    console.log("🔥 Google User:", googleUser);
+   // console.log("🔥 Google User:", googleUser);
 
     const email = googleUser.email;
     const name = googleUser.name || "";
