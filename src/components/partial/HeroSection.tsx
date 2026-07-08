@@ -31,37 +31,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
         <div className="hero-content">
 
-
-          {/* BRAND */}
-
-          <div className="brand-wrapper">
-
-            <div className="brand-icon">
-              ✦
-            </div>
-
-
-            <h1>
-              NONO
-            </h1>
-
-          </div>
-
-
-
-          {/* BADGE */}
-
-          <div className="badge-wrapper">
-
-            <span>
-              🔥 Wholesale & Retail Marketplace
-            </span>
-
-          </div>
-
-
-
-
           {/* TITLE */}
 
           <h2 className="hero-title">
