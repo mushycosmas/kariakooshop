@@ -212,48 +212,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
 
 
-          {/* FEATURES */}
-
-
-          <div className="features">
-
-
-            <div>
-              📱
-              <span>
-                Electronics
-              </span>
-            </div>
-
-
-            <div>
-              🔌
-              <span>
-                Accessories
-              </span>
-            </div>
-
-
-
-            <div>
-              📦
-              <span>
-                Bulk Deals
-              </span>
-            </div>
-
-
-
-            <div>
-              🚚
-              <span>
-                Fast Delivery
-              </span>
-            </div>
-
-
-          </div>
-
+        
 
 
 
