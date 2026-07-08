@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Container, Row, Col, Spinner, Button } from "react-bootstrap";
+import { Container, Row, Col, Spinner, Button, Alert } from "react-bootstrap";
 import ProductCard from "./ProductCard";
 import CategorySidebar from "../partial/CategorySidebar";
 import { Product } from "../../types/Product";
@@ -24,6 +24,7 @@ const ProductList: React.FC<ProductListProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
@@ -32,31 +33,72 @@ const ProductList: React.FC<ProductListProps> = ({
     setError(null);
 
     try {
-      const url = new URL("/api/ads/all", window.location.origin);
-      if (subcategoryId.toLowerCase() !== "all") {
-        url.searchParams.append("subcategory_id", subcategoryId);
+      // Try multiple API endpoints
+      const endpoints = [
+        `/api/ads/all?page=${pageNumber}&pageSize=${PAGE_SIZE}&${subcategoryId !== 'all' ? `subcategory_id=${subcategoryId}&` : ''}_=${Date.now()}`,
+        `/api/products?page=${pageNumber}&limit=${PAGE_SIZE}&${subcategoryId !== 'all' ? `subcategoryId=${subcategoryId}&` : ''}_=${Date.now()}`,
+        `/api/ads?page=${pageNumber}&limit=${PAGE_SIZE}&${subcategoryId !== 'all' ? `subcategory_id=${subcategoryId}&` : ''}_=${Date.now()}`
+      ];
+
+      let response = null;
+      let lastError = null;
+
+      // Try each endpoint until one works
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          const res = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (res.ok) {
+            response = res;
+            break;
+          }
+        } catch (err) {
+          lastError = err;
+          console.warn(`Endpoint ${endpoint} failed:`, err);
+        }
       }
-      url.searchParams.append("page", String(pageNumber));
-      url.searchParams.append("pageSize", String(PAGE_SIZE));
-      url.searchParams.append("_", Date.now().toString()); // 💥 cache buster
 
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Failed to fetch products");
+      if (!response) {
+        throw new Error(lastError || 'All API endpoints failed');
+      }
 
-      const data = await res.json();
-      const newProducts = data.products || [];
+      const data = await response.json();
+      
+      // Handle different response formats
+      let newProducts = [];
+      let total = 0;
+
+      if (Array.isArray(data)) {
+        newProducts = data;
+        total = data.length;
+      } else if (data.products && Array.isArray(data.products)) {
+        newProducts = data.products;
+        total = data.total || data.products.length;
+      } else if (data.data && Array.isArray(data.data)) {
+        newProducts = data.data;
+        total = data.total || data.data.length;
+      } else {
+        newProducts = [];
+        total = 0;
+      }
 
       setProducts((prev) => (reset ? newProducts : [...prev, ...newProducts]));
-
-      // ✅ Use total if provided
-      if (data.total !== undefined) {
-        setHasMore(pageNumber * PAGE_SIZE < data.total);
-      } else {
-        setHasMore(newProducts.length === PAGE_SIZE);
-      }
+      setHasMore(pageNumber * PAGE_SIZE < total);
+      
     } catch (err) {
-      console.error(err);
-      setError((err as Error).message);
+      console.error("Error fetching products:", err);
+      setError(err instanceof Error ? err.message : "Failed to load products");
+      // If we have products already, keep them. If not, try mock data
+      if (products.length === 0) {
+        // You can add mock data here for testing
+        console.warn("No products loaded. Check your API endpoint.");
+      }
     } finally {
       setLoading(false);
     }
@@ -67,6 +109,7 @@ const ProductList: React.FC<ProductListProps> = ({
     setProducts([]);
     setPage(1);
     setHasMore(true);
+    setError(null);
     fetchProducts(1, true);
   }, [subcategoryId]);
 
@@ -109,6 +152,16 @@ const ProductList: React.FC<ProductListProps> = ({
     };
   }, [handleIntersection]);
 
+  // Retry function
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setProducts([]);
+    setPage(1);
+    setHasMore(true);
+    setError(null);
+    fetchProducts(1, true);
+  };
+
   return (
     <Container fluid className="mt-4">
       <Row>
@@ -119,6 +172,30 @@ const ProductList: React.FC<ProductListProps> = ({
 
         {/* Products */}
         <Col xs={12} md={9} lg={9}>
+          {error && (
+            <Alert variant="danger" className="mb-4">
+              <Alert.Heading>Error Loading Products</Alert.Heading>
+              <p>{error}</p>
+              <hr />
+              <div className="d-flex gap-2">
+                <Button variant="outline-danger" onClick={handleRetry}>
+                  Retry
+                </Button>
+                <Button 
+                  variant="outline-secondary" 
+                  onClick={() => setError(null)}
+                >
+                  Dismiss
+                </Button>
+              </div>
+              <div className="mt-2">
+                <small className="text-muted">
+                  Tip: Make sure your backend server is running and the API endpoint exists.
+                </small>
+              </div>
+            </Alert>
+          )}
+
           <Row>
             {filteredProducts.map((product) => (
               <Col key={product.id} xs={12} sm={6} md={3} className="mb-4">
@@ -130,27 +207,42 @@ const ProductList: React.FC<ProductListProps> = ({
           {/* Intersection observer target */}
           <div
             ref={loaderRef}
-            style={{ height: "50px" }} // make sure it's visible
+            style={{ height: "50px" }} 
           />
 
           {loading && (
             <div className="text-center my-4">
-              <Spinner animation="border" />
+              <Spinner animation="border" variant="success" />
+              <p className="mt-2 text-muted">Loading products...</p>
             </div>
           )}
 
-          {error && <p className="text-danger text-center">{error}</p>}
-
           {!loading && !error && filteredProducts.length === 0 && (
-            <p className="text-center">No products found.</p>
+            <div className="text-center py-5">
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
+              <h5>No products found</h5>
+              <p className="text-muted">
+                {searchQuery ? `No results for "${searchQuery}"` : 'Try selecting a different category'}
+              </p>
+            </div>
           )}
 
           {/* Fallback load more */}
-          {!loading && hasMore && filteredProducts.length > 0 && (
+          {!loading && !error && hasMore && filteredProducts.length > 0 && (
             <div className="text-center my-4">
-              <Button onClick={() => setPage((prev) => prev + 1)}>
+              <Button 
+                variant="success" 
+                onClick={() => setPage((prev) => prev + 1)}
+                className="px-4"
+              >
                 Load More
               </Button>
+            </div>
+          )}
+
+          {!loading && !error && !hasMore && filteredProducts.length > 0 && (
+            <div className="text-center my-4 text-muted">
+              <small>You've reached the end</small>
             </div>
           )}
         </Col>
