@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 
@@ -39,7 +39,11 @@ interface Props {
 
 const ProductCard: React.FC<Props> = ({ product }) => {
   const router = useRouter();
-  const image = product.images?.[0]?.path;
+  const [isHovered, setIsHovered] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  const images = product.images || [];
+  const hasMultipleImages = images.length > 1;
 
   const getPrice = () => {
     if (product.wholesale_tiers?.length) {
@@ -80,16 +84,68 @@ const ProductCard: React.FC<Props> = ({ product }) => {
     router.push(url);
   };
 
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    if (hasMultipleImages) {
+      setCurrentImageIndex(1);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setCurrentImageIndex(0);
+  };
+
+  const currentImage = images[currentImageIndex]?.path || images[0]?.path;
+
   return (
     <>
       <Card 
         className="product-card border-0" 
         onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        role="button"
+        tabIndex={0}
       >
         {/* IMAGE */}
         <div className="image-wrapper">
-          {image ? (
-            <img src={image} alt={product.name} className="product-image" loading="lazy" />
+          {currentImage ? (
+            <>
+              <img 
+                src={currentImage} 
+                alt={product.name} 
+                className={`product-image ${isHovered && hasMultipleImages ? 'image-transition' : ''}`}
+                loading="lazy"
+              />
+              
+              {/* Click indicator overlay - appears on hover */}
+              <div className="click-indicator">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M7 11L12 6L17 11M12 6V18" />
+                </svg>
+                <span>Click to view</span>
+              </div>
+              
+              {/* Image counter badge */}
+              {hasMultipleImages && (
+                <div className="image-counter">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15L16 10L5 21" />
+                  </svg>
+                  <span>{images.length}</span>
+                </div>
+              )}
+
+              {/* Hover indicator */}
+              {hasMultipleImages && (
+                <div className={`hover-indicator ${isHovered ? 'visible' : ''}`}>
+                  <span>View image {currentImageIndex + 1} of {images.length}</span>
+                </div>
+              )}
+            </>
           ) : (
             <div className="no-image">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -100,20 +156,31 @@ const ProductCard: React.FC<Props> = ({ product }) => {
               <span>No Image</span>
             </div>
           )}
+
+          {/* Thumbnail dots */}
+          {hasMultipleImages && (
+            <div className="thumbnail-dots">
+              {images.map((_, index) => (
+                <span 
+                  key={index} 
+                  className={`dot ${currentImageIndex === index ? 'active' : ''}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* CONTENT */}
         <Card.Body className="content">
           <div className="top-row">
             <h6 className="product-title">{product.name}</h6>
-            <div className="badge">New</div>
+            {product.wholesale_tiers?.length && (
+              <div className="wholesale-badge">Wholesale</div>
+            )}
           </div>
 
           <div className="price-row">
             <span className="price">Tsh {price.toLocaleString()}</span>
-            {product.wholesale_tiers?.length && (
-              <span className="wholesale-badge">Wholesale</span>
-            )}
           </div>
 
           <div className="meta">
@@ -148,6 +215,7 @@ const ProductCard: React.FC<Props> = ({ product }) => {
           height: 100%;
           display: flex;
           flex-direction: column;
+          position: relative;
         }
 
         .product-card:hover {
@@ -171,11 +239,57 @@ const ProductCard: React.FC<Props> = ({ product }) => {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+        }
+
+        .image-transition {
+          animation: imageFade 0.3s ease;
+        }
+
+        @keyframes imageFade {
+          0% { opacity: 0.6; transform: scale(1.05); }
+          100% { opacity: 1; transform: scale(1); }
         }
 
         .product-card:hover .product-image {
           transform: scale(1.05);
+        }
+
+        /* Click indicator - appears on hover */
+        .click-indicator {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) scale(0.8);
+          background: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(8px);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          opacity: 0;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          pointer-events: none;
+          font-weight: 500;
+          font-size: 13px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .product-card:hover .click-indicator {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .click-indicator svg {
+          stroke: white;
+          animation: bounceArrow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes bounceArrow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
         }
 
         .no-image {
@@ -191,6 +305,82 @@ const ProductCard: React.FC<Props> = ({ product }) => {
 
         .no-image svg {
           opacity: 0.5;
+        }
+
+        /* Image counter */
+        .image-counter {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: rgba(0, 0, 0, 0.7);
+          backdrop-filter: blur(8px);
+          color: white;
+          font-size: 11px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-weight: 500;
+          pointer-events: none;
+        }
+
+        .image-counter svg {
+          stroke: white;
+        }
+
+        /* Hover indicator */
+        .hover-indicator {
+          position: absolute;
+          bottom: 12px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(8px);
+          color: white;
+          font-size: 11px;
+          padding: 6px 16px;
+          border-radius: 20px;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          pointer-events: none;
+          white-space: nowrap;
+          font-weight: 500;
+          letter-spacing: 0.3px;
+        }
+
+        .hover-indicator.visible {
+          opacity: 1;
+        }
+
+        /* Thumbnail dots */
+        .thumbnail-dots {
+          position: absolute;
+          bottom: 8px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 4px;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover .thumbnail-dots {
+          opacity: 1;
+        }
+
+        .dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.4);
+          transition: all 0.3s ease;
+        }
+
+        .dot.active {
+          background: #ffffff;
+          width: 16px;
+          border-radius: 3px;
         }
 
         /* CONTENT */
@@ -222,16 +412,16 @@ const ProductCard: React.FC<Props> = ({ product }) => {
           flex: 1;
         }
 
-        .badge {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
+        .wholesale-badge {
+          background: #f1f5f9;
+          color: #475569;
           font-size: 10px;
           font-weight: 600;
           padding: 2px 10px;
           border-radius: 20px;
-          white-space: nowrap;
           letter-spacing: 0.3px;
           flex-shrink: 0;
+          white-space: nowrap;
         }
 
         .price-row {
@@ -246,16 +436,6 @@ const ProductCard: React.FC<Props> = ({ product }) => {
           font-weight: 700;
           color: #0f172a;
           letter-spacing: -0.3px;
-        }
-
-        .wholesale-badge {
-          background: #f1f5f9;
-          color: #475569;
-          font-size: 10px;
-          font-weight: 600;
-          padding: 2px 10px;
-          border-radius: 20px;
-          letter-spacing: 0.3px;
         }
 
         .meta {
@@ -317,6 +497,23 @@ const ProductCard: React.FC<Props> = ({ product }) => {
 
           .meta {
             font-size: 13px;
+          }
+
+          .thumbnail-dots {
+            opacity: 1;
+          }
+
+          .hover-indicator {
+            display: none;
+          }
+
+          .image-counter {
+            font-size: 10px;
+            padding: 3px 8px;
+          }
+
+          .click-indicator {
+            display: none;
           }
         }
 
