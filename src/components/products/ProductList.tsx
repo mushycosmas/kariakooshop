@@ -12,7 +12,6 @@ interface ProductListProps {
 }
 
 const PAGE_SIZE = 12;
-const FOOTER_HEIGHT_PX = 200;
 
 const ProductList: React.FC<ProductListProps> = ({
   defaultCategory = "all",
@@ -25,15 +24,18 @@ const ProductList: React.FC<ProductListProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   const fetchProducts = async (pageNumber: number, reset = false) => {
+    if (loading) return;
+    
     setLoading(true);
     setError(null);
 
     try {
-      // Try multiple API endpoints
       const endpoints = [
         `/api/ads/all?page=${pageNumber}&pageSize=${PAGE_SIZE}&${subcategoryId !== 'all' ? `subcategory_id=${subcategoryId}&` : ''}_=${Date.now()}`,
         `/api/products?page=${pageNumber}&limit=${PAGE_SIZE}&${subcategoryId !== 'all' ? `subcategoryId=${subcategoryId}&` : ''}_=${Date.now()}`,
@@ -43,7 +45,6 @@ const ProductList: React.FC<ProductListProps> = ({
       let response = null;
       let lastErrorMessage = 'All API endpoints failed';
 
-      // Try each endpoint until one works
       for (const endpoint of endpoints) {
         try {
           console.log(`Trying endpoint: ${endpoint}`);
@@ -72,7 +73,6 @@ const ProductList: React.FC<ProductListProps> = ({
 
       const data = await response.json();
       
-      // Handle different response formats
       let newProducts = [];
       let total = 0;
 
@@ -90,15 +90,25 @@ const ProductList: React.FC<ProductListProps> = ({
         total = 0;
       }
 
-      setProducts((prev) => (reset ? newProducts : [...prev, ...newProducts]));
-      setHasMore(pageNumber * PAGE_SIZE < total);
+      const newHasMore = pageNumber * PAGE_SIZE < total;
+      setHasMore(newHasMore);
+      
+      setProducts((prev) => {
+        if (reset) {
+          return newProducts;
+        }
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewProducts = newProducts.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueNewProducts];
+      });
+      
+      setIsInitialLoad(false);
       
     } catch (err) {
       console.error("Error fetching products:", err);
       setError(err instanceof Error ? err.message : "Failed to load products");
-      // If we have products already, keep them. If not, try mock data
+      
       if (products.length === 0) {
-        // You can add mock data here for testing
         console.warn("No products loaded. Check your API endpoint.");
       }
     } finally {
@@ -106,73 +116,78 @@ const ProductList: React.FC<ProductListProps> = ({
     }
   };
 
-  // Reset when subcategory changes
   useEffect(() => {
     setProducts([]);
     setPage(1);
     setHasMore(true);
     setError(null);
+    setIsInitialLoad(true);
     fetchProducts(1, true);
   }, [subcategoryId]);
 
-  // Load next page
   useEffect(() => {
-    if (page > 1) fetchProducts(page);
+    if (page > 1 && !isInitialLoad) {
+      fetchProducts(page);
+    }
   }, [page]);
 
-  // Filter local products by search
   const filteredProducts = searchQuery.trim()
     ? products.filter((product) =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : products;
 
-  // Intersection observer callback
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       const entry = entries[0];
-      if (entry.isIntersecting && hasMore && !loading) {
+      if (entry.isIntersecting && hasMore && !loading && !isInitialLoad) {
+        console.log("Loading more products...");
         setPage((prev) => prev + 1);
       }
     },
-    [hasMore, loading]
+    [hasMore, loading, isInitialLoad]
   );
 
   useEffect(() => {
-    const observer = new IntersectionObserver(handleIntersection, {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(handleIntersection, {
       root: null,
-      rootMargin: `0px 0px ${FOOTER_HEIGHT_PX}px 0px`,
-      threshold: 0.1,
+      rootMargin: '0px 0px 100px 0px',
+      threshold: 0.5,
     });
 
-    if (loaderRef.current) {
-      observer.observe(loaderRef.current);
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observerRef.current.observe(currentLoader);
     }
 
     return () => {
-      if (loaderRef.current) observer.unobserve(loaderRef.current);
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
     };
   }, [handleIntersection]);
 
-  // Retry function
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
     setProducts([]);
     setPage(1);
     setHasMore(true);
     setError(null);
+    setIsInitialLoad(true);
     fetchProducts(1, true);
   };
 
   return (
     <Container fluid className="mt-4">
       <Row>
-        {/* Sidebar */}
         <Col xs={12} md={3} lg={3} className="mb-4">
           <CategorySidebar onSubcategorySelect={setSubcategoryId} />
         </Col>
 
-        {/* Products */}
         <Col xs={12} md={9} lg={9}>
           {error && (
             <Alert variant="danger" className="mb-4">
@@ -206,11 +221,12 @@ const ProductList: React.FC<ProductListProps> = ({
             ))}
           </Row>
 
-          {/* Intersection observer target */}
-          <div
-            ref={loaderRef}
-            style={{ height: "50px" }} 
-          />
+          {!error && hasMore && products.length > 0 && (
+            <div
+              ref={loaderRef}
+              style={{ height: "20px", margin: "10px 0" }}
+            />
+          )}
 
           {loading && (
             <div className="text-center my-4">
@@ -219,7 +235,7 @@ const ProductList: React.FC<ProductListProps> = ({
             </div>
           )}
 
-          {!loading && !error && filteredProducts.length === 0 && (
+          {!loading && !error && filteredProducts.length === 0 && !isInitialLoad && (
             <div className="text-center py-5">
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
               <h5>No products found</h5>
@@ -229,22 +245,16 @@ const ProductList: React.FC<ProductListProps> = ({
             </div>
           )}
 
-          {/* Fallback load more */}
-          {!loading && !error && hasMore && filteredProducts.length > 0 && (
+          {!loading && !error && hasMore && filteredProducts.length > 0 && filteredProducts.length < 50 && (
             <div className="text-center my-4">
               <Button 
                 variant="success" 
                 onClick={() => setPage((prev) => prev + 1)}
                 className="px-4"
+                disabled={loading}
               >
                 Load More
               </Button>
-            </div>
-          )}
-
-          {!loading && !error && !hasMore && filteredProducts.length > 0 && (
-            <div className="text-center my-4 text-muted">
-              <small>You've reached the end</small>
             </div>
           )}
         </Col>
