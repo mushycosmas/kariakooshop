@@ -41,7 +41,7 @@ const ProductList: React.FC<ProductListProps> = ({
       ];
 
       let response = null;
-      let lastError = null;
+      let lastErrorMessage = 'All API endpoints failed';
 
       // Try each endpoint until one works
       for (const endpoint of endpoints) {
@@ -57,15 +57,17 @@ const ProductList: React.FC<ProductListProps> = ({
           if (res.ok) {
             response = res;
             break;
+          } else {
+            lastErrorMessage = `HTTP ${res.status}: ${res.statusText}`;
           }
         } catch (err) {
-          lastError = err;
+          lastErrorMessage = err instanceof Error ? err.message : 'Network error';
           console.warn(`Endpoint ${endpoint} failed:`, err);
         }
       }
 
       if (!response) {
-        throw new Error(lastError || 'All API endpoints failed');
+        throw new Error(lastErrorMessage);
       }
 
       const data = await response.json();
