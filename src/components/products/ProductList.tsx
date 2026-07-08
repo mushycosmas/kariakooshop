@@ -73,7 +73,7 @@ const ProductList: React.FC<ProductListProps> = ({
 
       const data = await response.json();
       
-      let newProducts = [];
+      let newProducts: Product[] = [];
       let total = 0;
 
       if (Array.isArray(data)) {
@@ -93,12 +93,12 @@ const ProductList: React.FC<ProductListProps> = ({
       const newHasMore = pageNumber * PAGE_SIZE < total;
       setHasMore(newHasMore);
       
-      setProducts((prev) => {
+      setProducts((prev: Product[]) => {
         if (reset) {
           return newProducts;
         }
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueNewProducts = newProducts.filter(p => !existingIds.has(p.id));
+        const existingIds = new Set(prev.map((p: Product) => p.id));
+        const uniqueNewProducts = newProducts.filter((p: Product) => !existingIds.has(p.id));
         return [...prev, ...uniqueNewProducts];
       });
       
@@ -132,7 +132,7 @@ const ProductList: React.FC<ProductListProps> = ({
   }, [page]);
 
   const filteredProducts = searchQuery.trim()
-    ? products.filter((product) =>
+    ? products.filter((product: Product) =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : products;
@@ -214,7 +214,7 @@ const ProductList: React.FC<ProductListProps> = ({
           )}
 
           <Row>
-            {filteredProducts.map((product) => (
+            {filteredProducts.map((product: Product) => (
               <Col key={product.id} xs={12} sm={6} md={3} className="mb-4">
                 <ProductCard product={product} />
               </Col>
