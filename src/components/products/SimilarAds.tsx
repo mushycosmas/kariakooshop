@@ -27,9 +27,9 @@ const SimilarAds: React.FC<SimilarAdsProps> = ({ currentProduct, products = [] }
   return (
     <>
       <h4 className="mt-5 mb-3">Similar Ads</h4>
-      <Row>
+      <Row xs={1} sm={2} md={3} lg={4} xl={4}>
         {similar.map((ad) => (
-          <Col md={4} key={ad.id} className="mb-4">
+          <Col key={ad.id} className="mb-4">
             <ProductCard product={ad} />
           </Col>
         ))}
